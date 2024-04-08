@@ -10,15 +10,6 @@
   "engines": {
     "vscode": "^1.88.0"
   },
-  "categories": [
-    "Programming Languages",
-    "Visualization"
-  ],
-  "keywords": [
-    "hydra-synth",
-    "creative-coding",
-    "livecoding"
-  ],
   "activationEvents": [],
   "contributes": {
     "commands": [
@@ -30,22 +21,34 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc",
+    "compile": "npm run compile:backend && npm run compile:frontend",
+    "compile:backend": "tsc",
+    "compile:frontend": "rollup -c",
     "watch": "tsc -watch",
-    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "pretest": "npm run compile && npm run lint",
+    "test": "vscode-test",
+    "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
-    "@types/vscode": "^1.88.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/vscode": "^1.88.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
-    "eslint": "^8.57.0",
-    "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.8",
-    "@vscode/test-electron": "^2.3.9"
-  }
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.57.0",
+    "rollup": "^4.14.1",
+    "typescript": "^5.3.3"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "hydra-synth",
+    "creative-coding",
+    "livecoding"
+  ]
 }
