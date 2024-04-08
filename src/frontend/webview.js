@@ -1,6 +1,8 @@
 import Hydra from 'hydra-synth';
+import { createCanvas } from './canvas';
 
-const hydra = new Hydra({ detectAudio: false });
+const canvas = createCanvas({});
+const hydra = new Hydra({ canvas, detectAudio: false });
 
 window.addEventListener('message', (event) => {
     const { value } = event.data;
