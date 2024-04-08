@@ -45,6 +45,10 @@ export class HydraViewProvider {
         }
     }
 
+    captureImage() {
+        this.panel?.webview.postMessage({ type: 'image' });
+    }
+
     private createWebviewPanel() {
         this.panel = vscode.window.createWebviewPanel('vscode-hydra.panel', 'Hydra', vscode.ViewColumn.Two, {
             enableScripts: true,

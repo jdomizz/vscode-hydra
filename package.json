@@ -18,6 +18,12 @@
         "title": "Eval with Hydra",
         "category": "Hydra",
         "icon": "$(play)"
+      },
+      {
+        "command": "vscode-hydra.captureImage",
+        "title": "Take screenshot",
+        "category": "Hydra",
+        "icon": "$(device-camera)"
       }
     ],
     "keybindings": [
@@ -25,6 +31,12 @@
         "command": "vscode-hydra.evalDocument",
         "key": "ctrl+shift+enter",
         "mac": "cmd+shift+enter",
+        "when": "resourceLangId == javascript"
+      },
+      {
+        "command": "vscode-hydra.captureImage",
+        "key": "ctrl+shift+S",
+        "mac": "cmd+shift+S",
         "when": "resourceLangId == javascript"
       }
     ],
@@ -34,6 +46,11 @@
           "command": "vscode-hydra.evalDocument",
           "group": "navigation",
           "when": "resourceLangId == javascript"
+        },
+        {
+          "command": "vscode-hydra.captureImage",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == 'vscode-hydra.panel'"
         }
       ]
     }
