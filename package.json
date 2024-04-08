@@ -1,16 +1,25 @@
 {
   "name": "vscode-hydra",
+  "version": "0.0.1",
   "displayName": "Hydra",
   "description": "Hydra video synthesizer for Visual Studio Code",
-  "version": "0.0.1",
+  "publisher": "jdomizz",
+  "license": "AGPL-3.0-or-later",
+  "main": "./out/extension.js",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.88.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "hydra-synth",
+    "creative-coding",
+    "livecoding"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
@@ -21,10 +30,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "tsc",
+    "watch": "tsc -watch",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "test": "vscode-test"
   },
   "devDependencies": {
