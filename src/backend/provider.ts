@@ -72,16 +72,15 @@ export class HydraViewProvider {
             this.handleWebviewMessage(message);
         });
 
+        this.panel.webview.postMessage({ type: 'createHydra', value: vscode.workspace.getConfiguration('jdomizz.vscode-hydra') });
         this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
         vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');
     }
 
     private handleWebviewMessage(message: Message) {
-        const { type, value } = message;
-
-        switch (type) {
+        switch (message.type) {
             case 'status': return vscode.commands.executeCommand('setContext', 'vscode-hydra.status', message.value);
-            case 'error': return vscode.window.showErrorMessage(value);
+            case 'error': return vscode.window.showErrorMessage(message.value);
         }
     }
 }

@@ -4,38 +4,51 @@ import { VideoRecorder } from './recorder';
 
 const vscode = acquireVsCodeApi();
 
-const canvas = createCanvas({});
-const recorder = new VideoRecorder(canvas);
-const hydra = new Hydra({ canvas, detectAudio: false });
-hydra.synth.vidRecorder = recorder;
-hydra.canvasToImage = recorder.capture;
+class HydraService {
 
-const evalCode = (code) => {
-    hydra.sandbox.eval(`(async () => { ${code} })()`);
-};
+    createHydra(configuration) {
+        this.canvas = createCanvas(configuration);
+        this.hydra = new Hydra({ canvas: this.canvas, detectAudio: false });
+        this.hydra.synth.vidRecorder = new VideoRecorder(this.canvas);
+        this.hydra.canvasToImage = this.hydra.synth.vidRecorder.capture;
+    }
 
-const captureImage = () => {
-    hydra.synth.screencap();
-};
+    evalCode(code) {
+        if (this.hydra) {
+            this.hydra.sandbox.eval(`(async () => { ${code} })()`);
+        }
+    }
 
-const startRecorder = () => {
-    hydra.synth.vidRecorder.start();
-    vscode.postMessage({ type: 'status', value: 'recording' });
-};
+    captureImage() {
+        if (this.hydra) {
+            this.hydra.synth.screencap();
+        }
+    }
 
-const stopRecorder = () => {
-    hydra.synth.vidRecorder.stop();
-    vscode.postMessage({ type: 'status', value: 'rendering' });
-};
+    startRecorder() {
+        if (this.hydra) {
+            this.hydra.synth.vidRecorder.start();
+            vscode.postMessage({ type: 'status', value: 'recording' });
+        }
+    }
+
+    stopRecorder() {
+        if (this.hydra) {
+            this.hydra.synth.vidRecorder.stop();
+            vscode.postMessage({ type: 'status', value: 'rendering' });
+        }
+    }
+}
+
+const service = new HydraService();
 
 window.addEventListener('message', (event) => {
-    const { type, value } = event.data;
-
-    switch (type) {
-        case 'evalCode': return evalCode(value);
-        case 'captureImage': return captureImage();
-        case 'startRecorder': return startRecorder();
-        case 'stopRecorder': return stopRecorder();
+    switch (event.data.type) {
+        case 'createHydra': return service.createHydra(event.data.value);
+        case 'evalCode': return service.evalCode(event.data.value);
+        case 'captureImage': return service.captureImage();
+        case 'startRecorder': return service.startRecorder();
+        case 'stopRecorder': return service.stopRecorder();
     }
 });
 
