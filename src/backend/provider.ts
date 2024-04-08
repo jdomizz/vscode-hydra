@@ -38,7 +38,7 @@ export class HydraViewProvider {
             vscode.window.showInformationMessage(`${type} ${value}`);
         });
 
-        this.panel.webview.postMessage({ type: 'ping', value: 'pong!' });
+        this.panel.webview.postMessage({ type: 'eval', value: 'osc().out()' });
     }
 
 }

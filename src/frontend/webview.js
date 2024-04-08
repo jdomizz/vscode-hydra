@@ -1,3 +1,9 @@
-const vscode = acquireVsCodeApi();
+import Hydra from 'hydra-synth';
 
-window.addEventListener('message', (event) => vscode.postMessage(event.data));
+const hydra = new Hydra({ detectAudio: false });
+
+window.addEventListener('message', (event) => {
+    const { value } = event.data;
+
+    hydra.sandbox.eval(`(async () => { ${value} })()`);
+});
