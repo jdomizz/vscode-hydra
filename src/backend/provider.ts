@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+type Message = { type: string, value: string };
+
 export class HydraViewProvider {
 
     private panel?: vscode.WebviewPanel;
@@ -20,9 +22,30 @@ export class HydraViewProvider {
         `;
     }
 
+    private get code(): string {
+        let result = '';
+        if (vscode.window.activeTextEditor?.document) {
+            const activeDocument = vscode.window.activeTextEditor.document.uri.scheme === 'file'
+                ? vscode.window.activeTextEditor.document
+                : vscode.window.visibleTextEditors.filter(editor => editor.document.uri.scheme === 'file')[0].document;
+            if (activeDocument) {
+                result = activeDocument.getText();
+            }
+        }
+        return result;
+    }
+
     constructor(private readonly extension: vscode.Uri) { }
 
-    createPanel() {
+    evalDocument() {
+        if (this.panel) {
+            this.panel.webview.postMessage({ type: 'eval', value: this.code });
+        } else {
+            this.createWebviewPanel();
+        }
+    }
+
+    private createWebviewPanel() {
         this.panel = vscode.window.createWebviewPanel('vscode-hydra.panel', 'Hydra', vscode.ViewColumn.Two, {
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -34,11 +57,17 @@ export class HydraViewProvider {
 
         this.panel.webview.html = this.html;
         this.panel.webview.onDidReceiveMessage((message) => {
-            const { type, value } = message;
-            vscode.window.showInformationMessage(`${type} ${value}`);
+            this.handleWebviewMessage(message);
         });
 
-        this.panel.webview.postMessage({ type: 'eval', value: 'osc().out()' });
+        this.panel.webview.postMessage({ type: 'eval', value: this.code });
     }
 
+    private handleWebviewMessage(message: Message) {
+        const { type, value } = message;
+
+        switch (type) {
+            case 'error': return vscode.window.showErrorMessage(value);
+        }
+    }
 }

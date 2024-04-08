@@ -14,11 +14,29 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-hydra.createPanel",
-        "title": "Create a panel",
-        "category": "Hydra"
+        "command": "vscode-hydra.evalDocument",
+        "title": "Eval with Hydra",
+        "category": "Hydra",
+        "icon": "$(play)"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "vscode-hydra.evalDocument",
+        "key": "ctrl+shift+enter",
+        "mac": "cmd+shift+enter",
+        "when": "resourceLangId == javascript"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vscode-hydra.evalDocument",
+          "group": "navigation",
+          "when": "resourceLangId == javascript"
+        }
+      ]
+    }
   },
   "scripts": {
     "compile": "npm run compile:backend && npm run compile:frontend",

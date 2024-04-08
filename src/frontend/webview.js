@@ -3,9 +3,16 @@ import { createCanvas } from './canvas';
 
 const canvas = createCanvas({});
 const hydra = new Hydra({ canvas, detectAudio: false });
+const vscode = acquireVsCodeApi();
 
 window.addEventListener('message', (event) => {
-    const { value } = event.data;
+    const { type, value } = event.data;
 
-    hydra.sandbox.eval(`(async () => { ${value} })()`);
+    switch (type) {
+        case 'eval': return hydra.sandbox.eval(`(async () => { ${value} })()`);
+    }
 });
+
+window.onunhandledrejection = (event) => {
+    vscode.postMessage({ type: 'error', value: `${event.reason}` });
+};
