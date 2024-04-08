@@ -6,5 +6,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => provider.evalDocument()));
 	context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.captureImage', () => provider.captureImage()));
-
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.startRecorder', () => provider.startRecorder()));
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.stopRecorder', () => provider.stopRecorder()));
 }

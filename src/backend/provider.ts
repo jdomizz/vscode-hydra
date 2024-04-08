@@ -39,14 +39,22 @@ export class HydraViewProvider {
 
     evalDocument() {
         if (this.panel) {
-            this.panel.webview.postMessage({ type: 'eval', value: this.code });
+            this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
         } else {
             this.createWebviewPanel();
         }
     }
 
     captureImage() {
-        this.panel?.webview.postMessage({ type: 'image' });
+        this.panel?.webview.postMessage({ type: 'captureImage' });
+    }
+
+    startRecorder() {
+        this.panel?.webview.postMessage({ type: 'startRecorder' });
+    }
+
+    stopRecorder() {
+        this.panel?.webview.postMessage({ type: 'stopRecorder' });
     }
 
     private createWebviewPanel() {
@@ -64,13 +72,15 @@ export class HydraViewProvider {
             this.handleWebviewMessage(message);
         });
 
-        this.panel.webview.postMessage({ type: 'eval', value: this.code });
+        this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
+        vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');
     }
 
     private handleWebviewMessage(message: Message) {
         const { type, value } = message;
 
         switch (type) {
+            case 'status': return vscode.commands.executeCommand('setContext', 'vscode-hydra.status', message.value);
             case 'error': return vscode.window.showErrorMessage(value);
         }
     }

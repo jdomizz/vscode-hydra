@@ -1,29 +1,41 @@
 import Hydra from 'hydra-synth';
 import { createCanvas } from './canvas';
+import { VideoRecorder } from './recorder';
 
-const canvas = createCanvas({});
-const hydra = new Hydra({ canvas, detectAudio: false });
 const vscode = acquireVsCodeApi();
 
-hydra.canvasToImage = () => {
-    canvas.toBlob((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const name = `hydra-${new Date().toISOString()}`;
-        const extension = 'png';
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${name}.${extension}`;
-        a.click();
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000 * 60);
-    }, `image/png`);
+const canvas = createCanvas({});
+const recorder = new VideoRecorder(canvas);
+const hydra = new Hydra({ canvas, detectAudio: false });
+hydra.synth.vidRecorder = recorder;
+hydra.canvasToImage = recorder.capture;
+
+const evalCode = (code) => {
+    hydra.sandbox.eval(`(async () => { ${code} })()`);
+};
+
+const captureImage = () => {
+    hydra.synth.screencap();
+};
+
+const startRecorder = () => {
+    hydra.synth.vidRecorder.start();
+    vscode.postMessage({ type: 'status', value: 'recording' });
+};
+
+const stopRecorder = () => {
+    hydra.synth.vidRecorder.stop();
+    vscode.postMessage({ type: 'status', value: 'rendering' });
 };
 
 window.addEventListener('message', (event) => {
     const { type, value } = event.data;
 
     switch (type) {
-        case 'eval': return hydra.sandbox.eval(`(async () => { ${value} })()`);
-        case 'image': return hydra.synth.screencap();
+        case 'evalCode': return evalCode(value);
+        case 'captureImage': return captureImage();
+        case 'startRecorder': return startRecorder();
+        case 'stopRecorder': return stopRecorder();
     }
 });
 

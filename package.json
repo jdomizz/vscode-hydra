@@ -24,6 +24,18 @@
         "title": "Take screenshot",
         "category": "Hydra",
         "icon": "$(device-camera)"
+      },
+      {
+        "command": "vscode-hydra.startRecorder",
+        "title": "Start video recording",
+        "category": "Hydra",
+        "icon": "$(circle-large-outline)"
+      },
+      {
+        "command": "vscode-hydra.stopRecorder",
+        "title": "Stop video recording",
+        "category": "Hydra",
+        "icon": "$(circle-large-filled)"
       }
     ],
     "keybindings": [
@@ -38,6 +50,18 @@
         "key": "ctrl+shift+S",
         "mac": "cmd+shift+S",
         "when": "resourceLangId == javascript"
+      },
+      {
+        "command": "vscode-hydra.startRecorder",
+        "key": "ctrl+shift+V",
+        "mac": "cmd+shift+V",
+        "when": "resourceLangId == javascript && vscode-hydra.status == 'rendering'"
+      },
+      {
+        "command": "vscode-hydra.stopRecorder",
+        "key": "ctrl+shift+V",
+        "mac": "cmd+shift+V",
+        "when": "resourceLangId == javascript && vscode-hydra.status == 'recording'"
       }
     ],
     "menus": {
@@ -51,6 +75,16 @@
           "command": "vscode-hydra.captureImage",
           "group": "navigation",
           "when": "activeWebviewPanelId == 'vscode-hydra.panel'"
+        },
+        {
+          "command": "vscode-hydra.startRecorder",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'rendering'"
+        },
+        {
+          "command": "vscode-hydra.stopRecorder",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'recording'"
         }
       ]
     }
