@@ -23,8 +23,9 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-hydra.helloWorld",
-        "title": "Hello World"
+        "command": "vscode-hydra.createPanel",
+        "title": "Create a panel",
+        "category": "Hydra"
       }
     ]
   },
