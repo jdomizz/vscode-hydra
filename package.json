@@ -1,7 +1,7 @@
 {
   "name": "vscode-hydra",
   "version": "0.1.0",
-  "displayName": "Hydra",
+  "displayName": "Hydra Video Synthesizer",
   "description": "Hydra video synthesizer for Visual Studio Code",
   "publisher": "jdomizz",
   "license": "AGPL-3.0-or-later",
