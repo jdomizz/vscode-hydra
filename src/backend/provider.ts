@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 
-type Message = { type: string, value: string };
-
 export class HydraViewProvider {
 
     private panel?: vscode.WebviewPanel;
@@ -77,7 +75,7 @@ export class HydraViewProvider {
         vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');
     }
 
-    private handleWebviewMessage(message: Message) {
+    private handleWebviewMessage(message: { type: string, value: string }) {
         switch (message.type) {
             case 'status': return vscode.commands.executeCommand('setContext', 'vscode-hydra.status', message.value);
             case 'error': return vscode.window.showErrorMessage(message.value);
