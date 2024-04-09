@@ -116,6 +116,16 @@
     "rollup": "^4.14.1",
     "typescript": "^5.3.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdomizz/vscode-hydra.git"
+  },
+  "homepage": "https://github.com/jdomizz/vscode-hydra#readme",
+  "qna": "https://github.com/jdomizz/vscode-hydra/discussions",
+  "bugs": "https://github.com/jdomizz/vscode-hydra/issues",
+  "sponsor": {
+    "url": "https://opencollective.com/hydra-synth"
+  },
   "categories": [
     "Programming Languages",
     "Visualization"
