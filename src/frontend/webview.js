@@ -1,6 +1,8 @@
 import { HydraService } from './service';
 
-const service = new HydraService(acquireVsCodeApi());
+const vscode = acquireVsCodeApi();
+
+const service = new HydraService(vscode);
 
 window.addEventListener('message', (event) => {
     switch (event.data.type) {
