@@ -1,8 +1,8 @@
 # 🧩 Hydra for Visual Studio Code
 
-This extension makes it easy to eval and render [Hydra](https://hydra.ojack.xyz/) scripts in Visual Studio Code. 
+![demo](./media/demo.gif)
 
-![demo video](./media/demo.gif)
+This extension makes it easy to eval and render [Hydra](https://hydra.ojack.xyz/) scripts in Visual Studio Code.
 
 ## Installation
 
@@ -12,9 +12,9 @@ Search for `vscode-hydra` in the Visual Studio Code [marketplace](https://market
 
 This extension contributes the following commands:
 
-- `Ctrl/Cmd + Shift + Enter`: Eval the code of the active JavaScript document with the Hydra engine.
-- `Ctrl/Cmd + Shift + S`: Take a screenshot of the Hydra canvas.
-- `Ctrl/Cmd + Shift + V`: Start or stop video recording of the Hydra canvas.
+- `Ctrl/Cmd + Shift + Enter`: Eval the code of the active JavaScript document.
+- `Ctrl/Cmd + Shift + S`: Take a screenshot of the canvas.
+- `Ctrl/Cmd + Shift + V`: Start or stop video recording the canvas.
 
 ## Settings
 
@@ -23,11 +23,9 @@ This extension contributes the following settings:
 * `jdomizz.vscode-hydra.width`: Set the width of the canvas.
 * `jdomizz.vscode-hydra.height`: Set the height of the canvas.
 
-## Known Issues
+## Issues
 
-- **Microphones** and **webcams** do not work because Visual Studio Code restricts access to media devices.
-- **MIDI** does not work. There are plans to implement it.
-
+Microphones, webcams, and MIDI do not work due to the Visual Studio Code permissions policy.
 If you detect any other problem, please [open an issue](https://github.com/jdomizz/vscode-hydra/issues).
 
 ## License
