@@ -97,6 +97,7 @@
     "lint": "eslint src",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
+    "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
@@ -112,6 +113,7 @@
     "@typescript-eslint/parser": "^7.4.0",
     "@vscode/test-cli": "^0.0.8",
     "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^2.24.0",
     "eslint": "^8.57.0",
     "rollup": "^4.14.1",
     "typescript": "^5.3.3"
