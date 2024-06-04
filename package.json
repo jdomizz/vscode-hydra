@@ -125,7 +125,8 @@
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
-    "hydra-synth": "^1.3.29"
+    "hydra-synth": "^1.3.29",
+    "p5": "^1.9.4"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",

@@ -2,7 +2,7 @@
 
 ![demo](./media/demo.gif)
 
-This extension makes it easy to eval and render [Hydra](https://hydra.ojack.xyz/) scripts in Visual Studio Code.
+This extension allows live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studio Code. It also includes [p5.js](https://p5js.org) and support for [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) channels.
 
 ## Installation
 

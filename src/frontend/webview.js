@@ -1,8 +1,11 @@
+import P5 from './p5';
 import { HydraService } from './service';
 
 const vscode = acquireVsCodeApi();
 
 const service = new HydraService(vscode);
+
+window.P5 = P5;
 
 window.addEventListener('message', (event) => {
     switch (event.data.type) {
