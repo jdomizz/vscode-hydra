@@ -5,6 +5,14 @@ All notable changes to the `vscode-hydra` extension will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - Unreleased
+
+### Added
+
+- Command to eval a line (or a selection) of the active JavaScript document.
+- Command to eval a block of the active JavaScript document.
+- Hydra is exposed globally as `_hydra` (for community scripts).
+
 ## [0.1.0] - 2024-04-09
 
 ### Added
