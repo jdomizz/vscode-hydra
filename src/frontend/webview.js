@@ -1,9 +1,12 @@
+import { OSCService } from './osc';
 import P5 from './p5';
 import { HydraService } from './service';
 
 const vscode = acquireVsCodeApi();
 
 const service = new HydraService(vscode);
+
+window.msg = new OSCService();
 
 window.P5 = P5;
 

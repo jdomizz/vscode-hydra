@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import { openOscBridge } from './backend/osc';
 import { HydraViewProvider } from './backend/provider';
 
 export function activate(context: vscode.ExtensionContext) {
+    openOscBridge();
+
     const provider = new HydraViewProvider(context.extensionUri);
 
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => provider.evalDocument()));
