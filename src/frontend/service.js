@@ -13,6 +13,7 @@ export class HydraService {
         this.hydra = new Hydra({ canvas: this.canvas, detectAudio: false });
         this.hydra.synth.vidRecorder = new VideoRecorder(this.canvas);
         this.hydra.canvasToImage = this.hydra.synth.vidRecorder.capture;
+        window._hydra = this.hydra;
     }
 
     evalCode(code) {
