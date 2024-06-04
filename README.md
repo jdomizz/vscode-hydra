@@ -6,13 +6,15 @@ This extension makes it easy to eval and render [Hydra](https://hydra.ojack.xyz/
 
 ## Installation
 
-Search for `vscode-hydra` in the Visual Studio Code [marketplace](https://marketplace.visualstudio.com/vscode) and install the extension.
+Search for `vscode-hydra` in the extensions pane and install the extension.
 
 ## Features
 
 This extension contributes the following commands:
 
 - `Ctrl/Cmd + Shift + Enter`: Eval the code of the active JavaScript document.
+- `Ctrl/Cmd + Alt + Enter`: Eval a line (or a selection) of the active JavaScript document.
+- `Alt + Enter`: Eval a block of the active JavaScript document.
 - `Ctrl/Cmd + Shift + S`: Take a screenshot of the canvas.
 - `Ctrl/Cmd + Shift + V`: Start or stop video recording the canvas.
 

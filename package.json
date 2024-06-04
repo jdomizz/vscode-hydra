@@ -1,6 +1,6 @@
 {
   "name": "vscode-hydra",
-  "version": "0.1.0",
+  "version": "0.2.0-rc01",
   "displayName": "Hydra Video Synthesizer",
   "description": "Hydra video synthesizer for Visual Studio Code",
   "publisher": "jdomizz",
@@ -15,7 +15,19 @@
     "commands": [
       {
         "command": "vscode-hydra.evalDocument",
-        "title": "Eval with Hydra",
+        "title": "Eval document with Hydra",
+        "category": "Hydra",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vscode-hydra.evalLine",
+        "title": "Eval line or selection with Hydra",
+        "category": "Hydra",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vscode-hydra.evalBlock",
+        "title": "Eval block with Hydra",
         "category": "Hydra",
         "icon": "$(play)"
       },
@@ -43,6 +55,18 @@
         "command": "vscode-hydra.evalDocument",
         "key": "ctrl+shift+enter",
         "mac": "cmd+shift+enter",
+        "when": "resourceLangId == javascript"
+      },
+      {
+        "command": "vscode-hydra.evalLine",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "resourceLangId == javascript"
+      },
+      {
+        "command": "vscode-hydra.evalBlock",
+        "key": "alt+enter",
+        "mac": "alt+enter",
         "when": "resourceLangId == javascript"
       },
       {
