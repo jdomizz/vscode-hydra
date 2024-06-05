@@ -2,11 +2,10 @@
 
 ![demo](./media/demo.gif)
 
-This extension allows live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studio Code. It also includes [p5.js](https://p5js.org) and support for [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) channels.
-
-## Installation
-
-Search for `vscode-hydra` in the extensions pane and install the extension.
+This extension is for [live coding](https://en.wikipedia.org/wiki/Live_coding) with [Hydra](https://hydra.ojack.xyz/) in Visual Studio Code. 
+- Includes [p5.js](https://p5js.org).
+- Allows loading Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external libraries.
+- Supports [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) channels.
 
 ## Features
 
@@ -24,7 +23,7 @@ This extension contributes the following settings:
 
 * `jdomizz.vscode-hydra.width`: Set the width of the canvas.
 * `jdomizz.vscode-hydra.height`: Set the height of the canvas.
-* `jdomizz.vscode-hydra.loadScripts`: Sets the list of scripts to be loaded at startup.
+* `jdomizz.vscode-hydra.loadScripts`: Set the list of scripts to be loaded at startup.
 
 Example:
 
