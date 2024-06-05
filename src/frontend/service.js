@@ -13,7 +13,7 @@ export class HydraService {
         this.hydra = new Hydra({ canvas: this.canvas, detectAudio: false });
         this.hydra.synth.vidRecorder = new VideoRecorder(this.canvas);
         this.hydra.canvasToImage = this.hydra.synth.vidRecorder.capture;
-        window._hydra = this.hydra;
+        this._loadScripts(configuration);
     }
 
     evalCode(code) {
@@ -39,6 +39,15 @@ export class HydraService {
         if (this.hydra) {
             this.hydra.synth.vidRecorder.stop();
             this.vscode.postMessage({ type: 'status', value: 'rendering' });
+        }
+    }
+
+    _loadScripts(configuration) {
+        window._hydra = this.hydra;
+        if (configuration.loadScripts) {
+            configuration.loadScripts.forEach((uri) => {
+                this.evalCode(`await loadScript('${uri}')`);
+            });
         }
     }
 }

@@ -71,6 +71,8 @@ export class HydraViewProvider {
             this.handleWebviewMessage(message);
         });
 
+        // FIXME: tras ejecutar createHydra la webview envia msg para que se ejecute el evalCode 
+        // la idea es que se cargan todos los scriptsantes del eval, pero no va a funcionar por los async dentro del eval
         this.panel.webview.postMessage({ type: 'createHydra', value: vscode.workspace.getConfiguration('jdomizz.vscode-hydra') });
         this.panel.webview.postMessage({ type: 'evalCode', value: code });
         vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');

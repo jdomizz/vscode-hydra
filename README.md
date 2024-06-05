@@ -24,6 +24,18 @@ This extension contributes the following settings:
 
 * `jdomizz.vscode-hydra.width`: Set the width of the canvas.
 * `jdomizz.vscode-hydra.height`: Set the height of the canvas.
+* `jdomizz.vscode-hydra.loadScripts`: Sets the list of scripts to be loaded at startup.
+
+Example:
+
+```json
+"jdomizz.vscode-hydra.width": 1024,
+"jdomizz.vscode-hydra.height": 1024,
+"jdomizz.vscode-hydra.loadScripts": [
+    "https://cdn.statically.io/gl/metagrowing/extra-shaders-for-hydra/main/lib/all.js",
+    "https://unpkg.com/tone"
+]
+```
 
 ## Issues
 

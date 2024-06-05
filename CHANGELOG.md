@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command to eval a block of the active JavaScript document.
 - Hydra is exposed globally as `_hydra` (for community scripts).
 - P5 wrapper from Hydra's web editor.
+- Setting for the list of scripts to be loaded at startup.
 
 ## [0.1.0] - 2024-04-09
 
