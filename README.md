@@ -14,8 +14,8 @@ Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studi
 ## Commands
 
 - `Ctrl/Cmd + Shift + Enter`: Eval the active JavaScript document.
-- `Ctrl/Cmd + Alt + Enter`: Eval a line (or a selection) of the active JavaScript document.
-- `Alt + Enter`: Eval a block of the active JavaScript document.
+- `Ctrl/Cmd + Alt + Enter`: Eval a line (or a selection) of code.
+- `Alt + Enter`: Eval a block of code.
 - `Ctrl/Cmd + Shift + S`: Take a screenshot of the canvas.
 - `Ctrl/Cmd + Shift + V`: Start or stop video recording the canvas.
 
@@ -25,17 +25,9 @@ Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studi
 * `jdomizz.vscode-hydra.height`: Set the height of the canvas.
 * `jdomizz.vscode-hydra.loadScripts`: Set the list of scripts to be loaded at startup.
 
-## Loading scripts
+## Scripts
 
-There are two ways to load Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external JavaScript libraries.
-
-Using the Hydra `loadScript` function:
-
-```js
-loadScript("https://unpkg.com/tone")
-```
-
-Using the `jdomizz.vscode-hydra.loadScripts` configuration option:
+Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external JavaScript libraries can be loaded using Hydra's `loadScript` function or via the `jdomizz.vscode-hydra.loadScripts` configuration option:
 
 ```json
 {
@@ -48,21 +40,17 @@ Using the `jdomizz.vscode-hydra.loadScripts` configuration option:
 
 ## OSC
 
-Open Sound Control has been configured as follows:
+Open Sound Control is provided by [osc-js](https://adzialocha.github.io/osc-js/). It has been configured as follows:
 
 - Port `41234` is for _sending_ messages
 - Port `41235` is for _receiving_ messages
 
-To send a message:
+Use the `OSC` object to send an receive messages:
 
 ```js
-OSC.send('/address', value)
-```
+OSC.send('/test', value)
 
-To receive a message:
-
-```js
-OSC.on('/address', (args) => { /* do something */ })
+OSC.on('/test', (args) => { /* do something with args */ })
 ```
 
 ## p5.js
