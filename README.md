@@ -8,7 +8,7 @@ Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studi
 
 - Supports live coding with Hydra and JavaScript in general.
 - Supports loading Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external JavaScript libraries.
-- Supports [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) channels.
+- Supports [OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) communication.
 - Includes [p5.js](https://p5js.org).
 
 ## Commands
@@ -40,17 +40,25 @@ Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external
 
 ## OSC
 
-Open Sound Control is provided by [osc-js](https://adzialocha.github.io/osc-js/). It has been configured as follows:
+Open Sound Control is provided by [osc-js](https://adzialocha.github.io/osc-js/) in bridge mode. It has been configured as follows:
 
 - Port `41234` is for _sending_ messages
 - Port `41235` is for _receiving_ messages
 
-Use the `OSC` object to send an receive messages:
+Use the `OSC` object to send and receive messages:
 
 ```js
 OSC.send('/test', value)
 
 OSC.on('/test', (args) => { /* do something with args */ })
+```
+
+Note you can also open and close connections:
+
+```js
+OSC.open({ host: '127.0.0.1', port: 8080 })
+
+OSC.close()
 ```
 
 ## p5.js
