@@ -67,7 +67,7 @@ This extension includes the same wrapper for [p5.js](https://p5js.org) as the Hy
 
 ## Assets
 
-You can use the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension to serve assets from your project folder. This way you can use local images and videos.
+Install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension to serve assets from your project folder. This way you can use local images and videos.
 
 ```js
 s0.initImage('http://localhost:5500/image/hydra.jpg')
