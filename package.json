@@ -119,7 +119,7 @@
     "compile:frontend": "rollup -c",
     "watch": "tsc -watch",
     "lint": "eslint src",
-    "test:osc": "node osc-test.js",
+    "test:osc": "node demo/osc-node.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
     "package": "vsce package",

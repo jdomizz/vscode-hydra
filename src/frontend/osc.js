@@ -6,8 +6,8 @@ export class OSCService {
         this.osc = new OSC();
     }
 
-    open() {
-        this.osc.open();
+    open(options) {
+        this.osc.open(options);
     }
 
     send(address, args) {
@@ -20,7 +20,11 @@ export class OSCService {
         });
     }
 
-    // TODO: off(address, callback)
+    off(address, callback) {
+        this.osc.on(address, ({ args }) => {
+            callback(args);
+        });
+    }
 
     close() {
         this.osc.close();

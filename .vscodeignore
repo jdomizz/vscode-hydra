@@ -9,5 +9,6 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+demo
 node_modules
 rollup.config.mjs

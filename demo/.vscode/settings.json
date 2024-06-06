@@ -1,0 +1,7 @@
+{
+    "jdomizz.vscode-hydra.width": 1024,
+    "jdomizz.vscode-hydra.height": 1024,
+    "jdomizz.vscode-hydra.loadScripts": [
+        "https://cdn.statically.io/gl/metagrowing/extra-shaders-for-hydra/main/lib/all.js"
+    ]
+}
