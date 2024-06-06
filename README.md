@@ -65,9 +65,17 @@ OSC.close()
 
 This extension includes the same wrapper for [p5.js](https://p5js.org) as the Hydra web editor. You can check how to use it in the Hydra [documentacion](https://hydra.ojack.xyz/docs/docs/learning/extending-hydra/extending-hydra/#p5js).
 
+## Assets
+
+You can use the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension to serve assets from your project folder. This way you can use local images and videos.
+
+```js
+s0.initImage('http://localhost:5500/image/hydra.jpg')
+```
+
 ## Issues
 
-Microphones, webcams, and MIDI do not work due to the Visual Studio Code permissions policy.
+Microphones, webcams, screen capture and MIDI do not work due to the Visual Studio Code permissions policy.
 If you detect any other problem, please [open an issue](https://github.com/jdomizz/vscode-hydra/issues).
 
 ## License
