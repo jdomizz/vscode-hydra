@@ -6,9 +6,9 @@ setInterval(() => {
     client.send('/test/node', [Math.random(), Math.random()]);
 }, 1000);
 
-const server = new Server(41235, 'localhost');
+// const server = new Server(41235, 'localhost');
 
-server.on('message', (message) => {
-    console.log(`node received`, message);
-    server.close();
-});
+// server.on('message', (message) => {
+//     console.log(`node received`, message);
+//     server.close();
+// });

@@ -48,28 +48,22 @@ Using the `jdomizz.vscode-hydra.loadScripts` configuration option:
 
 ## OSC
 
-// FIXME https://github.com/ojack/hydra-osc
+Open Sound Control has been configured as follows:
 
-[OSC](https://en.wikipedia.org/wiki/Open_Sound_Control) has been configured as follows:
-
-- Port `41234` for _sending_ messages (server)
-- Port `41235` for _receiving_ messages (client)
-
-Use the `msg` object to send and receive OSC messages.
+- Port `41234` is for _sending_ messages
+- Port `41235` is for _receiving_ messages
 
 To send a message:
 
 ```js
-msg.send('/address', value)
+OSC.send('/address', value)
 ```
 
 To receive a message:
 
 ```js
-msg.on('/address', (args) => { /* do something */ })
+OSC.on('/address', (args) => { /* do something */ })
 ```
-
-See [this repository](https://github.com/hydra-synth/hydra-examples) for examples of use.
 
 ## p5.js
 

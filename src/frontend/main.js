@@ -9,7 +9,7 @@ const hydra = new HydraService(vscode);
 const osc = new OSCService();
 osc.open();
 
-window.msg = osc;
+window.OSC = osc;
 
 window.P5 = P5;
 
