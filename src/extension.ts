@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { EditorService } from './backend/editor';
-import { openOscBridge } from './backend/osc';
+import { OSCService } from './backend/osc';
 import { HydraPanel } from './backend/panel';
 
 export function activate(context: vscode.ExtensionContext) {
-    openOscBridge(); // TODO: close!
-
-    const panel = new HydraPanel(context.extensionUri, new EditorService());
+    const editor = new EditorService();
+    const osc = new OSCService();
+    const panel = new HydraPanel(context, editor, osc);
 
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => panel.evalDocument()));
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalLine', () => panel.evalLine()));

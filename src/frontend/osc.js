@@ -4,6 +4,9 @@ export class OSCService {
 
     constructor() {
         this.osc = new OSC();
+    }
+
+    open() {
         this.osc.open();
     }
 
@@ -15,5 +18,11 @@ export class OSCService {
         this.osc.on(address, ({ args }) => {
             callback(args);
         });
+    }
+
+    // TODO: off(address, callback)
+
+    close() {
+        this.osc.close();
     }
 }

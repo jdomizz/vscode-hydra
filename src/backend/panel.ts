@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { EditorService } from './editor';
+import { OSCService } from './osc';
 
 export class HydraPanel {
 
@@ -22,25 +23,31 @@ export class HydraPanel {
 
     private get script(): vscode.Uri | undefined {
         return this.panel?.webview.asWebviewUri(
-            vscode.Uri.joinPath(this.extension, 'out', 'frontend', 'webview.js')
+            vscode.Uri.joinPath(this.context.extensionUri, 'out', 'frontend', 'main.js')
         );
     }
 
+    private code = '';
+
     constructor(
-        private readonly extension: vscode.Uri,
+        private readonly context: vscode.ExtensionContext,
         private readonly editor: EditorService,
+        private readonly osc: OSCService,
     ) { }
 
     evalDocument() {
-        this.eval(this.editor.document);
+        this.code = this.editor.document;
+        this.evalCode();
     }
 
     evalLine() {
-        this.eval(this.editor.line);
+        this.code = this.editor.line;
+        this.evalCode();
     }
 
     evalBlock() {
-        this.eval(this.editor.block);
+        this.code = this.editor.block;
+        this.evalCode();
     }
 
     captureImage() {
@@ -55,40 +62,40 @@ export class HydraPanel {
         this.panel?.webview.postMessage({ type: 'stopRecorder' });
     }
 
-    private createWebviewPanel(code: string) {
+    private evalCode() {
+        if (this.panel) {
+            this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
+        } else {
+            this.createPanel();
+        }
+    }
+
+    private createPanel() {
+        this.osc.open();
         this.panel = vscode.window.createWebviewPanel('vscode-hydra.panel', 'Hydra', vscode.ViewColumn.Two, {
             enableScripts: true,
             retainContextWhenHidden: true,
-            localResourceRoots: [this.extension]
+            localResourceRoots: [this.context.extensionUri]
         });
         this.panel.onDidDispose(() => {
+            this.osc.close();
             this.panel = undefined;
         });
 
         this.panel.webview.html = this.html;
         this.panel.webview.onDidReceiveMessage((message) => {
-            this.handleWebviewMessage(message);
+            this.onMessage(message);
         });
 
-        // FIXME: tras ejecutar createHydra la webview envia msg para que se ejecute el evalCode 
-        // la idea es que se cargan todos los scriptsantes del eval, pero no va a funcionar por los async dentro del eval
-        this.panel.webview.postMessage({ type: 'createHydra', value: vscode.workspace.getConfiguration('jdomizz.vscode-hydra') });
-        this.panel.webview.postMessage({ type: 'evalCode', value: code });
-        vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');
+        const config = vscode.workspace.getConfiguration('jdomizz.vscode-hydra');
+        this.panel.webview.postMessage({ type: 'createHydra', value: config });
     }
 
-    private handleWebviewMessage(message: { type: string, value: string }) {
+    private onMessage(message: { type: string, value: string }) {
         switch (message.type) {
             case 'status': return vscode.commands.executeCommand('setContext', 'vscode-hydra.status', message.value);
             case 'error': return vscode.window.showErrorMessage(message.value);
-        }
-    }
-
-    private eval(code: string) {
-        if (this.panel) {
-            this.panel.webview.postMessage({ type: 'evalCode', value: code });
-        } else {
-            this.createWebviewPanel(code);
+            case 'start': return this.panel?.webview.postMessage({ type: 'evalCode', value: this.code });
         }
     }
 

@@ -1,8 +1,8 @@
-// https://github.com/hydra-synth/hydra/blob/main/src/lib/p5-wrapper.js
+// Taken from https://github.com/hydra-synth/hydra/blob/main/src/lib/p5-wrapper.js
 
 import p5 from 'p5';
 
-export default class P5 extends p5 {
+export class P5 extends p5 {
 
     constructor({
         width = window.innerWidth,

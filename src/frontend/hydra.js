@@ -14,6 +14,8 @@ export class HydraService {
         this.hydra.synth.vidRecorder = new VideoRecorder(this.canvas);
         this.hydra.canvasToImage = this.hydra.synth.vidRecorder.capture;
         this._loadScripts(configuration);
+        this.vscode.postMessage({ type: 'status', value: 'rendering' });
+        this.vscode.postMessage({ type: 'start', value: true });
     }
 
     evalCode(code) {

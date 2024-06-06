@@ -1,10 +1,10 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 export default {
-    input: 'src/frontend/webview.js',
+    input: 'src/frontend/main.js',
     output: {
-        file: 'out/frontend/webview.js',
+        file: 'out/frontend/main.js',
         format: 'es',
     },
     plugins: [
