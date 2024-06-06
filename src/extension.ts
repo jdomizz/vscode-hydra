@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
+import { EditorService } from './backend/editor';
 import { openOscBridge } from './backend/osc';
-import { HydraViewProvider } from './backend/provider';
+import { HydraPanel } from './backend/panel';
 
 export function activate(context: vscode.ExtensionContext) {
-    openOscBridge();
+    openOscBridge(); // TODO: close!
 
-    const provider = new HydraViewProvider(context.extensionUri);
+    const panel = new HydraPanel(context.extensionUri, new EditorService());
 
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => provider.evalDocument()));
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalLine', () => provider.evalLine()));
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalBlock', () => provider.evalBlock()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => panel.evalDocument()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalLine', () => panel.evalLine()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalBlock', () => panel.evalBlock()));
 
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.captureImage', () => provider.captureImage()));
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.startRecorder', () => provider.startRecorder()));
-    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.stopRecorder', () => provider.stopRecorder()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.captureImage', () => panel.captureImage()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.startRecorder', () => panel.startRecorder()));
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.stopRecorder', () => panel.stopRecorder()));
 }

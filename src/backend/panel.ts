@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import { EditorService } from './editor';
 
-export class HydraViewProvider {
+export class HydraPanel {
 
     private panel?: vscode.WebviewPanel;
 
@@ -20,28 +21,26 @@ export class HydraViewProvider {
     }
 
     private get script(): vscode.Uri | undefined {
-        const script = vscode.Uri.joinPath(this.extension, 'out', 'frontend', 'webview.js');
-        return this.panel?.webview.asWebviewUri(script);
+        return this.panel?.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extension, 'out', 'frontend', 'webview.js')
+        );
     }
 
-    private get editor(): vscode.TextEditor {
-        return vscode.window.activeTextEditor?.document.uri.scheme === 'file'
-            ? vscode.window.activeTextEditor
-            : vscode.window.visibleTextEditors.filter(editor => editor.document.uri.scheme === 'file')[0];
-    }
-
-    constructor(private readonly extension: vscode.Uri) { }
+    constructor(
+        private readonly extension: vscode.Uri,
+        private readonly editor: EditorService,
+    ) { }
 
     evalDocument() {
-        this.eval(this.editor.document.getText());
+        this.eval(this.editor.document);
     }
 
     evalLine() {
-        this.eval(this.editor.document.getText(this.getLine()));
+        this.eval(this.editor.line);
     }
 
     evalBlock() {
-        this.eval(this.editor.document.getText(this.getBlock()));
+        this.eval(this.editor.block);
     }
 
     captureImage() {
@@ -93,32 +92,4 @@ export class HydraViewProvider {
         }
     }
 
-    private getLine(): vscode.Range {
-        return this.editor.selection.isEmpty
-            ? this.editor.document.lineAt(this.editor.selection.active.line).range
-            : this.editor.selection;
-    }
-
-    private getBlock(): vscode.Range {
-        const currentLine = this.editor.selection.active.line;
-
-        let startLine = currentLine;
-        while (startLine > 0 && !this.isEmptyLine(startLine)) {
-            startLine--;
-        }
-
-        let endLine = currentLine;
-        while (endLine < this.editor.document.lineCount - 1 && !this.isEmptyLine(endLine)) {
-            endLine++;
-        }
-
-        const start = this.editor.document.lineAt(startLine).range.start;
-        const end = this.editor.document.lineAt(endLine).range.end;
-        return new vscode.Range(start, end);
-    }
-
-    private isEmptyLine(position: number): boolean {
-        const line = this.editor.document.lineAt(position).range;
-        return this.editor.document.getText(line) === '';
-    }
 }
