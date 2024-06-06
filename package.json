@@ -1,8 +1,8 @@
 {
   "name": "vscode-hydra",
   "version": "0.2.0-rc01",
-  "displayName": "Hydra Video Synthesizer",
-  "description": "Hydra video synthesizer for Visual Studio Code",
+  "displayName": "Hydra Live Code",
+  "description": "Live coding with Hydra in Visual Studio Code",
   "publisher": "jdomizz",
   "license": "AGPL-3.0-or-later",
   "main": "./out/extension.js",
