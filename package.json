@@ -1,6 +1,6 @@
 {
   "name": "vscode-hydra",
-  "version": "0.2.0-rc02",
+  "version": "0.2.0-rc03",
   "displayName": "Hydra Live Code",
   "description": "Live coding with Hydra in Visual Studio Code",
   "publisher": "jdomizz",

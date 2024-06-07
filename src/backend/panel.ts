@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { EditorService } from './editor';
-import { OSCService } from './osc';
 
 export class HydraPanel {
 
@@ -29,25 +27,15 @@ export class HydraPanel {
 
     private code = '';
 
-    constructor(
-        private readonly context: vscode.ExtensionContext,
-        private readonly editor: EditorService,
-        private readonly osc: OSCService,
-    ) { }
+    constructor(private readonly context: vscode.ExtensionContext) { }
 
-    evalDocument() {
-        this.code = this.editor.document;
-        this.evalCode();
-    }
-
-    evalLine() {
-        this.code = this.editor.line;
-        this.evalCode();
-    }
-
-    evalBlock() {
-        this.code = this.editor.block;
-        this.evalCode();
+    evalCode(code: string) {
+        this.code = code;
+        if (this.panel) {
+            this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
+        } else {
+            this.createPanel();
+        }
     }
 
     captureImage() {
@@ -62,23 +50,13 @@ export class HydraPanel {
         this.panel?.webview.postMessage({ type: 'stopRecorder' });
     }
 
-    private evalCode() {
-        if (this.panel) {
-            this.panel.webview.postMessage({ type: 'evalCode', value: this.code });
-        } else {
-            this.createPanel();
-        }
-    }
-
     private createPanel() {
-        this.osc.open();
         this.panel = vscode.window.createWebviewPanel('vscode-hydra.panel', 'Hydra', vscode.ViewColumn.Two, {
             enableScripts: true,
             retainContextWhenHidden: true,
             localResourceRoots: [this.context.extensionUri]
         });
         this.panel.onDidDispose(() => {
-            this.osc.close();
             this.panel = undefined;
         });
 
