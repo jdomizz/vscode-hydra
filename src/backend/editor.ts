@@ -46,6 +46,6 @@ export class EditorService {
 
     private isEmptyLine(position: number): boolean {
         const line = this.editor.document.lineAt(position).range;
-        return this.editor.document.getText(line) === '';
+        return this.editor.document.getText(line).trim() === '';
     }
 }
