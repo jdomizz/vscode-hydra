@@ -11,7 +11,7 @@ Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studi
 - Supports [OSC](https://opensoundcontrol.stanford.edu/) communication.
 - Includes [p5.js](https://p5js.org).
 
-Take a look at [this](https://github.com/jdomizz/vscode-hydra/tree/main/demo) demo project with examples of use and configuration.
+You can see a demo project with examples [here](https://github.com/jdomizz/vscode-hydra/tree/main/demo).
 
 ## Commands
 
