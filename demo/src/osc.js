@@ -1,9 +1,9 @@
-// Funciona en conjunto con osc-node.js
+// Intended to communicate with 'osc-node.js'
 
 let freq = 10;
 let rot = 0.2;
 
-// Escuchar los mensajes de osc-node.js
+// Listen to messages from 'osc-node.js'
 OSC.on('/test/node', (args) => {
     freq = args[0];
     rot = args[1] / 10;
@@ -13,5 +13,5 @@ osc(() => freq)
     .mult(osc().rotate(() => rot))
     .out();
 
-// Enviar un mensaje a osc-node.js
+// Send a message to 'osc-node.js'
 // OSC.send('/test/webview', Math.random());

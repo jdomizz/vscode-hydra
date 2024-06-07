@@ -161,8 +161,10 @@
     "Visualization"
   ],
   "keywords": [
-    "hydra-synth",
     "creative-coding",
-    "livecoding"
+    "livecoding",
+    "hydra-synth",
+    "p5js",
+    "osc"
   ]
 }
