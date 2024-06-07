@@ -4,7 +4,7 @@ let freq = 10;
 let rot = 0.2;
 
 // Escuchar los mensajes de osc-node.js
-msg.on('/test/node', (args) => {
+OSC.on('/test/node', (args) => {
     freq = args[0];
     rot = args[1] / 10;
 });
@@ -14,6 +14,4 @@ osc(() => freq)
     .out();
 
 // Enviar un mensaje a osc-node.js
-setTimeout(() => {
-    msg.send('/test/webview', Math.random());
-}, 60 * 1000);
+// OSC.send('/test/webview', Math.random());
