@@ -11,4 +11,6 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 demo
 node_modules
+!node_modules/osc-js
+!node_modules/ws
 rollup.config.mjs
