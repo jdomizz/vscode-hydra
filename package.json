@@ -1,6 +1,6 @@
 {
   "name": "vscode-hydra",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Hydra Live Code",
   "description": "Live coding with Hydra in Visual Studio Code",
   "publisher": "jdomizz",
@@ -120,8 +120,6 @@
     "watch": "tsc -watch",
     "lint": "eslint src",
     "test:osc": "node demo/osc-node.js",
-    "pretest": "npm run compile && npm run lint",
-    "test": "vscode-test",
     "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
@@ -138,12 +136,11 @@
     "@types/vscode": "^1.88.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
-    "@vscode/test-cli": "^0.0.8",
-    "@vscode/test-electron": "^2.3.9",
-    "@vscode/vsce": "^2.27.0",
+    "@vscode/vsce": "^2.32.0",
     "eslint": "^8.57.0",
     "node-osc": "^9.1.1",
-    "rollup": "^4.14.1",
+    "ovsx": "^0.10.12",
+    "rollup": "^4.60.3",
     "typescript": "^5.3.3"
   },
   "repository": {
