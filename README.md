@@ -2,7 +2,7 @@
 
 ![demo](./media/demo.gif)
 
-Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studio Code. 
+Extension for live coding with the [Hydra](https://hydra.ojack.xyz/) video synthesizer in Visual Studio Code and its forks.
 
 ## Features
 
@@ -12,6 +12,12 @@ Extension for live coding with [Hydra](https://hydra.ojack.xyz/) in Visual Studi
 - Includes [p5.js](https://p5js.org).
 
 You can see a demo project with examples [here](https://github.com/jdomizz/vscode-hydra/tree/main/demo).
+
+## Install
+
+- [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jdomizz.vscode-hydra)
+- [Open VSX Registry](https://open-vsx.org/extension/jdomizz/vscode-hydra)
+- [VSIX file](https://github.com/jdomizz/vscode-hydra/releases)
 
 ## Commands
 

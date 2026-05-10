@@ -5,6 +5,12 @@ All notable changes to the `vscode-hydra` extension will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-11
+
+### Added
+
+- GitHub Action to publish the extension on the Visual Studio Marketplace and the Open VSX Registry, and attach it to the GitHub release
+
 ## [0.2.0] - 2024-06-07
 
 ### Added
