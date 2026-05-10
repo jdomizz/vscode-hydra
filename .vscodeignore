@@ -1,6 +1,7 @@
 .vscode/**
 .vscode-test/**
 src/**
+.github
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -14,3 +15,4 @@ node_modules
 !node_modules/osc-js
 !node_modules/ws
 rollup.config.mjs
+media/demo.gif
