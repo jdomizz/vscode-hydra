@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { SweepCliClient, SweepFeedback } from './sweep-cli';
+import { SweepctlClient, SweepFeedback } from './sweepctl';
 import open from 'open';
 
 export class HydraPanel {
 
     private panel?: vscode.WebviewPanel;
-    private sweepClient?: SweepCliClient;
+    private sweepClient?: SweepctlClient;
     private isSweepMode = false;
 
     private get html(): string {
@@ -75,7 +75,7 @@ export class HydraPanel {
         const canvasUrl = config.get<string>('canvasUrl', 'http://localhost:4173/canvas.html');
 
         try {
-            this.sweepClient = new SweepCliClient({ sweepCliPath, syncPort });
+            this.sweepClient = new SweepctlClient({ sweepCliPath, syncPort });
             await this.sweepClient.start();
             
             // Open canvas.html in external browser

@@ -19,7 +19,7 @@ export interface SweepFeedback {
     [key: string]: any;
 }
 
-export class SweepCliClient extends EventEmitter {
+export class SweepctlClient extends EventEmitter {
     private process: ChildProcess | null = null;
     private config: SweepCliConfig;
     private nextId = 1;
@@ -48,13 +48,13 @@ export class SweepCliClient extends EventEmitter {
                     const feedback: SweepFeedback = JSON.parse(line);
                     this.handleFeedback(feedback);
                 } catch (e) {
-                    vscode.window.showErrorMessage(`Failed to parse sweep-cli output: ${line}`);
+                    vscode.window.showErrorMessage(`Failed to parse sweepctl output: ${line}`);
                 }
             }
         });
 
         this.process.stderr?.on('data', (data: Buffer) => {
-            vscode.window.showErrorMessage(`sweep-cli stderr: ${data.toString()}`);
+            vscode.window.showErrorMessage(`sweepctl stderr: ${data.toString()}`);
         });
 
         this.process.on('close', (code: number | null) => {
@@ -69,7 +69,7 @@ export class SweepCliClient extends EventEmitter {
         // Wait for ready message
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout waiting for sweep-cli ready'));
+                reject(new Error('Timeout waiting for sweepctl ready'));
             }, 5000);
 
             this.once('ready', () => {
