@@ -111,6 +111,31 @@
           "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'recording'"
         }
       ]
+    },
+    "configuration": {
+      "title": "Hydra",
+      "properties": {
+        "hydra.connectToSweep": {
+          "type": "boolean",
+          "default": false,
+          "description": "Connect to Sweep PWA for full-featured live coding (MIDI, cameras, output window)"
+        },
+        "hydra.sweepCliPath": {
+          "type": "string",
+          "default": "sweepctl",
+          "description": "Path to sweepctl executable"
+        },
+        "hydra.syncPort": {
+          "type": "number",
+          "default": 9163,
+          "description": "Port for sweep-sync WebSocket server"
+        },
+        "hydra.canvasUrl": {
+          "type": "string",
+          "default": "http://localhost:4173/canvas.html",
+          "description": "URL of Sweep canvas.html entry point"
+        }
+      }
     }
   },
   "scripts": {
@@ -125,6 +150,7 @@
   },
   "dependencies": {
     "hydra-synth": "^1.3.29",
+    "open": "^11.0.2",
     "osc-js": "^2.4.1",
     "p5": "^1.9.4"
   },

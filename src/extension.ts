@@ -19,4 +19,11 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.startRecorder', () => panel.startRecorder()));
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.stopRecorder', () => panel.stopRecorder()));
 
+    context.subscriptions.push({
+        dispose: () => {
+            panel.dispose();
+            osc.close();
+        }
+    });
+
 }

@@ -15,8 +15,9 @@
 		"allowSyntheticDefaultImports": true,
 		"skipLibCheck": true,
 		"types": [
-			"./src/types/hydra-synth",
-			"vscode"
+			"node",
+			"vscode",
+			"./src/types/hydra-synth"
 		]
 	},
 	"include": [
