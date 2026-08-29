@@ -2,50 +2,64 @@ import Hydra from 'hydra-synth';
 import { createCanvas } from './canvas';
 import { VideoRecorder } from './recorder';
 
+interface Configuration {
+    width?: number;
+    height?: number;
+    loadScripts?: string[];
+}
+
+interface VSCodeApi {
+    postMessage(message: { type: string; value?: any }): void;
+}
+
 export class HydraService {
 
-    constructor(vscode) {
+    private vscode: VSCodeApi;
+    private canvas?: HTMLCanvasElement;
+    private hydra?: Hydra;
+
+    constructor(vscode: VSCodeApi) {
         this.vscode = vscode;
     }
 
-    createHydra(configuration) {
+    createHydra(configuration: Configuration): void {
         this.canvas = createCanvas(configuration);
         this.hydra = new Hydra({ canvas: this.canvas, detectAudio: false });
-        this.hydra.synth.vidRecorder = new VideoRecorder(this.canvas);
-        this.hydra.canvasToImage = this.hydra.synth.vidRecorder.capture;
+        (this.hydra.synth as any).vidRecorder = new VideoRecorder(this.canvas);
+        (this.hydra as any).canvasToImage = (this.hydra.synth as any).vidRecorder.capture;
         this._loadScripts(configuration);
         this.vscode.postMessage({ type: 'status', value: 'rendering' });
         this.vscode.postMessage({ type: 'start', value: true });
     }
 
-    evalCode(code) {
+    evalCode(code: string): void {
         if (this.hydra) {
             this.hydra.sandbox.eval(`(async () => { ${code} })()`);
         }
     }
 
-    captureImage() {
+    captureImage(): void {
         if (this.hydra) {
             this.hydra.synth.screencap();
         }
     }
 
-    startRecorder() {
+    startRecorder(): void {
         if (this.hydra) {
-            this.hydra.synth.vidRecorder.start();
+            (this.hydra.synth as any).vidRecorder.start();
             this.vscode.postMessage({ type: 'status', value: 'recording' });
         }
     }
 
-    stopRecorder() {
+    stopRecorder(): void {
         if (this.hydra) {
-            this.hydra.synth.vidRecorder.stop();
+            (this.hydra.synth as any).vidRecorder.stop();
             this.vscode.postMessage({ type: 'status', value: 'rendering' });
         }
     }
 
-    _loadScripts(configuration) {
-        window._hydra = this.hydra;
+    private _loadScripts(configuration: Configuration): void {
+        (window as any)._hydra = this.hydra;
         if (configuration.loadScripts) {
             configuration.loadScripts.forEach((uri) => {
                 this.evalCode(`await loadScript('${uri}')`);

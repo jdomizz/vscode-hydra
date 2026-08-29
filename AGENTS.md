@@ -16,7 +16,7 @@ VS Code extension for live coding with Hydra video synthesizer.
 
 Two compilation targets:
 - **Backend** (`src/**/*.ts`) — TypeScript, compiled by `tsc` to `out/`. Extension entry: `src/extension.ts` → `out/extension.js`
-- **Frontend** (`src/frontend/*.js`) — plain JS, bundled by Rollup to `out/frontend/main.js`. Runs inside webview panel.
+- **Frontend** (`src/frontend/*.ts`) — TypeScript, bundled by Rollup to `out/frontend/main.js`. Runs inside webview panel.
 
 Backend modules:
 - `src/extension.ts` — activation, command registration
@@ -25,17 +25,22 @@ Backend modules:
 - `src/backend/osc.ts` — OSC bridge service
 
 Frontend modules (webview):
-- `src/frontend/main.js` — entry point
-- `src/frontend/hydra.js` — Hydra synth wrapper
-- `src/frontend/canvas.js` — canvas management
-- `src/frontend/osc.js` — OSC in webview
-- `src/frontend/recorder.js` — video recording
-- `src/frontend/p5.js` — p5.js wrapper
+- `src/frontend/main.ts` — entry point
+- `src/frontend/hydra.ts` — Hydra synth wrapper
+- `src/frontend/canvas.ts` — canvas management
+- `src/frontend/osc.ts` — OSC in webview
+- `src/frontend/recorder.ts` — video recording
+- `src/frontend/p5.ts` — p5.js wrapper
+
+Type definitions:
+- `src/types/hydra-synth.d.ts` — hydra-synth DSL types (from feat/types branch)
+- `src/types/global.d.ts` — global type declarations for hydra sketches
+- `src/types/glsl/glsl-functions.d.ts` — GLSL transform catalog types
 
 ## Conventions
 
 - Backend: TypeScript, strict mode, `@typescript-eslint`
-- Frontend: plain JS (no TypeScript), ES modules
+- Frontend: TypeScript, strict mode, bundled with Rollup
 - ESLint config in `.eslintrc.json` — warns on style issues, no errors
 - Runtime dependencies: `hydra-synth`, `osc-js`, `p5`
 - `demo/` is a playground with examples — not part of the extension

@@ -2,6 +2,10 @@ import { HydraService } from './hydra';
 import { OSCService } from './osc';
 import { P5 } from './p5';
 
+declare function acquireVsCodeApi(): {
+    postMessage(message: { type: string; value?: any }): void;
+};
+
 const vscode = acquireVsCodeApi();
 
 const hydra = new HydraService(vscode);
@@ -9,9 +13,9 @@ const hydra = new HydraService(vscode);
 const osc = new OSCService();
 osc.open();
 
-window.OSC = osc;
+(window as any).OSC = osc;
 
-window.P5 = P5;
+(window as any).P5 = P5;
 
 window.addEventListener('message', (event) => {
     switch (event.data.type) {
@@ -23,7 +27,7 @@ window.addEventListener('message', (event) => {
     }
 });
 
-window.onunhandledrejection = (event) => {
+window.onunhandledrejection = (event: PromiseRejectionEvent) => {
     vscode.postMessage({ type: 'error', value: `${event.reason}` });
 };
 
