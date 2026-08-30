@@ -52,7 +52,9 @@ CI publishes to GitHub Releases, OpenVSX, and VS Marketplace on `v*` tags (`.git
 
 ## Workflow
 
-Specs live in `dev/roadmap/`:
+Specs live in `.opencode/specs/` (index in `roadmap.md`) — the canonical spec
+structure used across all workspace projects (hydra-element is the reference
+implementation):
 
 ```
 backlog/ → active/ → archive/
@@ -66,8 +68,12 @@ When implementing a spec:
 1. Move it from `backlog/` to `active/`
 2. Implement according to the spec's "Done when" criteria
 3. User reviews and approves
-4. Move to `archive/`
+4. Move to `archive/`, append `## Status: accepted` with the commit hash
 5. Update docs if needed: README status with commit hash, CHANGELOG entry, and AGENTS.md if the implementation changes commands, dependencies, architecture, or workflow
+
+Cross-project developments (e.g. the Rig program) are sequenced and decided in
+the workspace program roadmap (`.opencode/specs/roadmap.md` at the workspace
+root); this repo's `roadmap.md` indexes local specs only.
 
 When a spec (or any feature/fix) is finished and approved, **update the docs** before considering it done:
 
