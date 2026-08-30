@@ -1,110 +1,194 @@
 import * as vscode from 'vscode';
-import type { SweepOscBridge } from '../backend/sweep-osc-bridge';
-import type { SweepHttpServer } from '../backend/sweep-http';
 
-export interface StatusState {
+/**
+ * Structured state for the status panel.
+ *
+ * The extension calls {@link StatusPanel.update} when the rig lifecycle
+ * changes (start/stop, port assignments). The panel itself subscribes to
+ * wire feedback for transient state (panic, recording).
+ */
+export interface RigStatusState {
     running: boolean;
-    ports?: { relay?: number; http?: number; osc?: number };
+    relay?: { port: number; connected: boolean };
+    http?: { port: number; running: boolean };
+    osc?: { port: number; running: boolean };
+    midi?: { enabled: boolean; connected: boolean };
+    panic: boolean;
+    recording: boolean;
+    runtimeUrl?: string;
 }
 
-export interface StatusDeps {
-    oscBridge: SweepOscBridge;
-    httpServer: SweepHttpServer;
+/**
+ * Structural wire interface for status panel subscription.
+ *
+ * The panel only needs push feedback; it does not send commands. This
+ * avoids a hard dependency on the RigWire class.
+ */
+export interface StatusWire {
+    onFeedback(handler: (fb: { type: string; [key: string]: unknown }) => void): () => void;
 }
 
-export class Status implements vscode.Disposable {
-    private readonly barItem: vscode.StatusBarItem;
-    private readonly oscBridge: SweepOscBridge;
-    private readonly httpServer: SweepHttpServer;
-    private state: StatusState = { running: false };
+/**
+ * Single status bar item with ports tooltip + "Open runtime" link.
+ *
+ * Phase 2 finalization (F4): integrates with the rig wire state
+ * (relay/http/osc/midi ports and statuses, panic, recording).
+ */
+export class StatusPanel implements vscode.Disposable {
+    #barItem: vscode.StatusBarItem;
+    #state: RigStatusState = {
+        running: false,
+        panic: false,
+        recording: false,
+    };
+    #unsubFeedback: (() => void) | null = null;
 
-    constructor(deps: StatusDeps) {
-        this.oscBridge = deps.oscBridge;
-        this.httpServer = deps.httpServer;
-
-        this.barItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-        this.barItem.text = '$(server) Rig: stopped';
-        this.barItem.tooltip = this.buildTooltip();
-        this.barItem.show();
-
-        this.wire();
+    /**
+     * @param _deps — backward-compatible placeholder for Phase 0 deps.
+     * Phase 2 uses `update()` to inject state; the constructor no longer
+     * requires bridge instances.
+     */
+    constructor(_deps?: unknown) {
+        this.#barItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Left,
+            100,
+        );
+        this.#barItem.text = '$(server) Rig: stopped';
+        this.#barItem.tooltip = this.#buildTooltip();
+        this.#barItem.command = 'vscode-hydra.openRuntime';
+        this.#barItem.show();
     }
 
-    update(state: StatusState): void {
-        this.state = state;
-        this.render();
+    /**
+     * Update the status panel with new rig state.
+     *
+     * Called by the extension when the rig lifecycle changes (start/stop,
+     * port assignments). The panel re-renders text and tooltip.
+     */
+    update(state: RigStatusState): void {
+        this.#state = state;
+        this.#render();
     }
 
+    /**
+     * Subscribe to wire feedback for transient state (panic, recording).
+     *
+     * The panel listens for `panic:state` and `capture:state` feedback
+     * and updates its internal state accordingly. Returns a disposable
+     * that unsubscribes.
+     */
+    subscribe(wire: StatusWire): vscode.Disposable {
+        this.unsubscribe();
+        this.#unsubFeedback = wire.onFeedback((fb) => {
+            if (fb.type === 'panic:state') {
+                this.#state.panic = fb.active as boolean;
+                this.#render();
+            } else if (fb.type === 'capture:state') {
+                this.#state.recording = fb.recording as boolean;
+                this.#render();
+            }
+        });
+        return { dispose: () => this.unsubscribe() };
+    }
+
+    /**
+     * Dispose the status bar item and unsubscribe from wire feedback.
+     */
     dispose(): void {
-        this.barItem.dispose();
+        this.unsubscribe();
+        this.#barItem.dispose();
     }
 
-    private wire(): void {
-        const ports: { relay?: number; http?: number; osc?: number } = {};
+    private unsubscribe(): void {
+        if (this.#unsubFeedback) {
+            this.#unsubFeedback();
+            this.#unsubFeedback = null;
+        }
+    }
 
-        this.oscBridge.on('log', (msg: string) => {
-            if (msg.includes('listening on UDP')) {
-                ports.osc = this.oscBridge.getUdpPort();
-                this.update({ running: true, ports: { ...ports } });
+    #render(): void {
+        if (!this.#state.running) {
+            this.#barItem.text = '$(server) Rig: stopped';
+        } else {
+            const parts: string[] = [];
+            if (this.#state.relay) {
+                parts.push(`relay :${this.#state.relay.port}`);
             }
-        });
-
-        this.oscBridge.on('close', () => {
-            delete ports.osc;
-            this.update({ running: Object.keys(ports).length > 0, ports: { ...ports } });
-        });
-
-        this.oscBridge.on('error', (msg: string) => {
-            vscode.window.showErrorMessage(`OSC Bridge: ${msg}`);
-        });
-
-        this.httpServer.on('log', (msg: string) => {
-            if (msg.includes('Serving')) {
-                ports.http = this.httpServer.getPort();
-                this.update({ running: true, ports: { ...ports } });
+            if (this.#state.http) {
+                parts.push(`http :${this.#state.http.port}`);
             }
-        });
-
-        this.httpServer.on('close', () => {
-            delete ports.http;
-            this.update({ running: Object.keys(ports).length > 0, ports: { ...ports } });
-        });
-
-        this.httpServer.on('error', (msg: string) => {
-            vscode.window.showErrorMessage(`HTTP Server: ${msg}`);
-        });
+            if (this.#state.osc) {
+                parts.push(`OSC :${this.#state.osc.port}`);
+            }
+            if (this.#state.midi?.enabled) {
+                parts.push('MIDI');
+            }
+            let text = `$(server-process) Rig: ${parts.join(' · ')}`;
+            if (this.#state.recording) {
+                text += ' $(record) recording';
+            }
+            if (this.#state.panic) {
+                text += ' $(alert) PANIC';
+            }
+            this.#barItem.text = text;
+        }
+        this.#barItem.tooltip = this.#buildTooltip();
     }
 
-    private render(): void {
-        this.barItem.text = this.state.running
-            ? '$(server-process) Rig: running'
-            : '$(server) Rig: stopped';
-        this.barItem.tooltip = this.buildTooltip();
-    }
-
-    private buildTooltip(): vscode.MarkdownString {
+    #buildTooltip(): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
 
-        if (this.state.running && this.state.ports) {
-            md.appendMarkdown('**Rig** is running\n\n');
-            if (this.state.ports.relay !== undefined) {
-                md.appendMarkdown(`- **${this.state.ports.relay}** relay (ws)\n`);
-            }
-            if (this.state.ports.http !== undefined) {
-                md.appendMarkdown(`- **${this.state.ports.http}** http\n`);
-            }
-            if (this.state.ports.osc !== undefined) {
-                md.appendMarkdown(`- **${this.state.ports.osc}** osc (udp)\n`);
-            }
-            md.appendMarkdown('\n---\n\n');
-            if (this.state.ports.http !== undefined) {
-                md.appendMarkdown(`[Open runtime](http://localhost:${this.state.ports.http})`);
-            }
-        } else {
+        if (!this.#state.running) {
             md.appendMarkdown('Rig is stopped.');
+            return md;
+        }
+
+        md.appendMarkdown('**Rig** is running\n\n');
+        md.appendMarkdown('| Service | Port | Status |\n');
+        md.appendMarkdown('|---|---|---|\n');
+
+        if (this.#state.relay) {
+            const status = this.#state.relay.connected ? '✓ connected' : '○ disconnected';
+            md.appendMarkdown(`| relay (ws) | ${this.#state.relay.port} | ${status} |\n`);
+        }
+        if (this.#state.http) {
+            const status = this.#state.http.running ? '✓ running' : '○ stopped';
+            md.appendMarkdown(`| http | ${this.#state.http.port} | ${status} |\n`);
+        }
+        if (this.#state.osc) {
+            const status = this.#state.osc.running ? '✓ running' : '○ stopped';
+            md.appendMarkdown(`| osc (udp) | ${this.#state.osc.port} | ${status} |\n`);
+        }
+        if (this.#state.midi) {
+            const status = this.#state.midi.connected ? '✓ connected' : '○ disconnected';
+            md.appendMarkdown(`| midi | — | ${status} |\n`);
+        }
+
+        if (this.#state.panic) {
+            md.appendMarkdown('\n---\n\n');
+            md.appendMarkdown('$(alert) **PANIC** is active\n');
+        }
+
+        if (this.#state.recording) {
+            md.appendMarkdown('\n---\n\n');
+            md.appendMarkdown('$(record) **Recording** in progress\n');
+        }
+
+        if (this.#state.runtimeUrl) {
+            md.appendMarkdown('\n---\n\n');
+            md.appendMarkdown(`[Open runtime](${this.#state.runtimeUrl})`);
         }
 
         return md;
     }
 }
+
+/**
+ * Backward-compatible alias for the Phase 0 `Status` class.
+ *
+ * Phase 0 shipped a basic status panel under the name `Status`. Phase 2
+ * (F4) rewrites it as `StatusPanel` with full rig state integration.
+ * The alias preserves the old export for any code that imports `Status`.
+ */
+export { StatusPanel as Status };
