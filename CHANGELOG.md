@@ -5,6 +5,30 @@ All notable changes to the `vscode-hydra` extension will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v1.0 (M3 plugin rewrite)
+
+### Added
+- Rig framework integration: `@jdomizz/rig-transport` consumed as library
+- External browser runtime as primary render surface (`<hydra-element>`, served by `rig-serve`)
+- Single status bar item with rig state (relay/http/osc/midi ports, panic, recording)
+- Eval-flash decoration + diagnostics (Problems panel integration)
+- Capture pipeline: `capture:image|start|stop` over wire + out-of-band HTTP blobs
+- `rig.*` settings namespace with `hydra.*` fallback (`rig.instrument`, `rig.target`, `rig.relayPort`, `rig.httpPort`, `rig.udpIn/Out`, `rig.midiEnabled`, `rig.*Path`)
+- `RigProcessSupervisor`: in-process rig-relay + rig-serve by default; hybrid mode via `rig.*Path` settings
+- `RuntimeContext` interface for runtime pages
+- vitest test suite (86 tests across 8 files)
+
+### Changed
+- Plugin is now a thin editor shell — no longer renders Hydra itself in production
+- Settings: `rig.*` primary; `hydra.*` deprecated (kept as fallbacks)
+- Old OSC bridge stack removed (was double-bind 8080 + sweep-osc-bridge)
+- `setTimeout(500)` occult waits replaced with event-driven ready detection
+
+### Migration
+- Existing `hydra.*` settings continue to work via fallback resolution
+- Wire JSON shape unchanged for eval/eval:code/etc; new wire commands `panic` and `capture:*` available
+- Renderer recommended: external browser; webview still works as quick-preview
+
 ## [0.3.0] - 2026-05-11
 
 ### Added

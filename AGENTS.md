@@ -7,55 +7,141 @@
 - `npm run compile:frontend` — bundle frontend only (`rollup -c`)
 - `npm run watch` — watch backend TypeScript changes (`tsc -watch`)
 - `npm run lint` — lint `src/` with ESLint
+- `npm test` — run unit tests (`vitest run` — 86 tests across 8 files)
 - `npm run package` — package as VSIX (`vsce package`)
 - `npm run test:osc` — run demo OSC node (`node demo/osc-node.js`)
 
 ## Architecture
 
-VS Code extension for live coding with Hydra video synthesizer.
+VS Code extension for live coding with Hydra video synthesizer. **Three-layer architecture** (M3 v1.0 rewrite):
 
-Two compilation targets:
-- **Backend** (`src/**/*.ts`) — TypeScript, compiled by `tsc` to `out/`. Extension entry: `src/extension.ts` → `out/extension.js`
-- **Frontend** (`src/frontend/*.ts`) — TypeScript, bundled by Rollup to `out/frontend/main.js`. Runs inside webview panel.
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. EDITOR SHELL (the extension)                             │
+│    eval commands, extraction, diagnostics, decorations,     │
+│    single status bar panel, RigProcessSupervisor            │
+├─────────────────────────────────────────────────────────────┤
+│ 2. RIG WIRE (one transport)                                 │
+│    RigWire → @jdomizz/rig-transport (TransportClient)       │
+│    rig-relay in-process (spawned in hybrid mode)            │
+├─────────────────────────────────────────────────────────────┤
+│ 3. RENDERER                                                 │
+│    external browser runtime (primary) ← rig-serve           │
+│    webview quick-preview (fallback, no devices)             │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Backend modules:
-- `src/extension.ts` — activation, command registration
-- `src/backend/panel.ts` — webview panel management
-- `src/backend/editor.ts` — document/line/block extraction
-- `src/backend/osc.ts` — OSC bridge service
+### Layer 1 — Editor shell (`src/editor/`, `src/diagnostics.ts`, `src/decorations.ts`, `src/status/`, `src/capture/`)
 
-Frontend modules (webview):
-- `src/frontend/main.ts` — entry point
-- `src/frontend/hydra.ts` — Hydra synth wrapper
-- `src/frontend/canvas.ts` — canvas management
-- `src/frontend/osc.ts` — OSC in webview
-- `src/frontend/recorder.ts` — video recording
-- `src/frontend/p5.ts` — p5.js wrapper
+- `src/extension.ts` — activation, command registration, wires all M3 modules
+- `src/editor/extract.ts` — document/line/block/selection extraction (pure)
+- `src/editor/index.ts` — `EditorService` (VS Code integration)
+- `src/decorations.ts` — eval-flash + error decorations
+- `src/diagnostics.ts` — `vscode.Diagnostic` collection (Problems panel)
+- `src/status/index.ts` — `StatusPanel` (single status bar item, rig state, ports tooltip, open-runtime link)
+- `src/capture/pipeline.ts` — `CapturePipeline` (`capture:image|start|stop` over wire + HTTP blob transport)
+- `src/capture/transport.ts` — out-of-band HTTP blob receiver
 
-Type definitions:
+### Layer 2 — Rig wire (`src/rig/`, `src/settings*.ts`)
+
+- `src/rig/client.ts` — `RigWire` (wraps `TransportClient` from `@jdomizz/rig-transport`)
+- `src/rig/supervisor.ts` — `RigProcessSupervisor` (in-process relay + serve by default; hybrid mode via `rig.*Path`)
+- `src/rig/relay-server.ts` — `RelayServer` (thin in-process WebSocket relay)
+- `src/settings-core.ts` — pure settings resolver (`rig.*` primary, `hydra.*` fallback)
+- `src/settings.ts` — VS Code configuration integration
+
+### Layer 3 — Renderer (`src/runtime/`)
+
+- `src/runtime/index.html` — served runtime page
+- `src/runtime/main.ts` — mounts `<hydra-element>`, connects to relay, routes wire commands
+
+### Legacy webview (`src/frontend/`)
+
+- `src/frontend/main.ts`, `hydra.ts`, `canvas.ts`, `osc.ts`, `recorder.ts`, `p5.ts` — legacy webview quick-preview. Still uses `hydra-synth` directly (this is the legacy path; D5 only applies to `src/runtime/`).
+
+### Type definitions (`src/types/`)
+
 - `src/types/hydra-synth.d.ts` — hydra-synth DSL types (from feat/types branch)
+- `src/types/hydra-element.d.ts` — type shim for `hydra-element` (ships JS only)
 - `src/types/global.d.ts` — global type declarations for hydra sketches
 - `src/types/glsl/glsl-functions.d.ts` — GLSL transform catalog types
 
 ## Conventions
 
-- Backend: TypeScript, strict mode, `@typescript-eslint`
-- Frontend: TypeScript, strict mode, bundled with Rollup
+- TypeScript strict mode everywhere; `@typescript-eslint`
+- Backend: compiled by `tsc` to `out/`
+- Frontend (webview): bundled with Rollup to `out/frontend/main.js`
+- Runtime: bundled with Rollup; served by `rig-serve`
 - ESLint config in `.eslintrc.json` — warns on style issues, no errors
-- Runtime dependencies: `hydra-synth`, `osc-js`, `p5`
 - `demo/` is a playground with examples — not part of the extension
-- OSC ports: `41234` send, `41235` receive (bridge mode)
-- **Do not add new `hydra.*` settings.** Phase 0 introduces `rig.*` settings alongside the existing `hydra.*` ones. The `hydra.*` settings remain as backward-compatible fallbacks; `rig.*` become the primary settings in Phase 2 (v1.0). New configuration belongs under `rig.*`.
+- **Do not add new `hydra.*` settings.** Use `rig.*`. The `hydra.*` namespace is frozen and kept only as backward-compatible fallbacks.
+
+### Runtime dependencies
+
+| Package | Role |
+|---|---|
+| `@jdomizz/rig-transport` | Wire protocol (file ref to `../rig/packages/rig-transport`) |
+| `hydra-element` | Runtime custom element (file ref to `../hydra-element`) |
+| `hydra-synth` | **Legacy webview only** — transitive dep of `hydra-element`; direct import only in `src/frontend/` |
+| `ws` | WebSocket server for in-process relay |
+| `open` | Open runtime URL in external browser |
+| `p5` | p5.js wrapper (legacy webview) |
+
+`osc-js` was moved to `devDependencies` in Phase 0 (legacy OSC stack removed from runtime).
+
+### D5 invariant — no `hydra-synth` in `src/runtime/`
+
+The runtime frontend (`src/runtime/`) must **never** import `hydra-synth` directly. It uses `<hydra-element>` exclusively. This is a hard invariant:
+
+```bash
+# Must return NOTHING (exit code 1):
+git grep "from 'hydra-synth'" src/runtime/
+```
+
+The legacy webview (`src/frontend/`) still imports `hydra-synth` directly — that is the legacy path and will be removed when the webview is migrated to `<hydra-element>`.
+
+## Testing
+
+**vitest** — 86 tests across 8 spec files:
+
+| File | Tests | Covers |
+|---|---|---|
+| `src/settings.spec.ts` | 7 | Settings resolver (rig.*/hydra.* fallback) |
+| `src/decorations.spec.ts` | 7 | Eval-flash + error decorations |
+| `src/editor/extract.spec.ts` | 10 | Document/line/block extraction |
+| `src/editor/index.spec.ts` | 10 | EditorService |
+| `src/rig/client.spec.ts` | 12 | RigWire (eval, sendCommand, feedback) |
+| `src/rig/supervisor.spec.ts` | 10 | RigProcessSupervisor (in-process + hybrid) |
+| `src/capture/pipeline.spec.ts` | 15 | CapturePipeline (image, recording, timeout) |
+| `src/status/index.spec.ts` | 15 | StatusPanel (state, tooltip, feedback) |
+
+**Playwright** is the planned test runner for the runtime page (Phase 2 / Phase 3 work — served page mounts `<hydra-element>`, dispatches `hydra-ready`, round-trips `rig.eval`).
 
 ## Migration: Rig (in progress)
 
-This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework. The program is tracked in the workspace program roadmap (`.opencode/specs/roadmap.md` at the workspace root) with milestones M0–M4; the plugin-specific spec is `.opencode/specs/backlog/rig-plugin-rewrite.md`.
+This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework. The program is tracked in the workspace program roadmap (`.opencode/specs/roadmap.md` at the workspace root) with milestones M0–M4; the plugin-specific spec is `.opencode/specs/active/rig-plugin-rewrite.md`.
 
-- **M0 (current):** Plugin Phase 0 — pre-Rig coherence. Single status panel, kill legacy double-OSC stack, remove 500ms readiness sleeps, add `rig.*` settings alongside `hydra.*`, fix documentation drift.
-- **M1:** Rig published — the six `@jdomizz/rig-*` packages on npm.
-- **M2:** Wire freeze — generic wire core + `panic` + `capture:*` plugin extension.
-- **M3:** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), one frontend two mounts (webview quick-preview + plugin-served runtime page in external browser), `<hydra-element>` replaces direct `hydra-synth` usage.
-- **M4:** Publish vscode-hydra v1.0.
+- **M0 (done):** Plugin Phase 0 — pre-Rig coherence. Single status panel, kill legacy double-OSC stack, remove 500ms readiness sleeps, add `rig.*` settings alongside `hydra.*`, fix documentation drift. Shipped in `906e772`.
+- **M1 (done):** Rig published — the six `@jdomizz/rig-*` packages on npm. (Blocked on user `npm login`; local file refs used in development.)
+- **M2 (done):** Wire freeze — generic wire core + `panic` + `capture:*` plugin extension.
+- **M3 (in progress):** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), external browser runtime as primary render surface, `<hydra-element>` replaces direct `hydra-synth` usage in `src/runtime/`. Commits: `914859c`, `3fdbd6c`, `147c26a`.
+- **M4 (pending):** Publish vscode-hydra v1.0.
+
+### M3 status
+
+| Component | Status |
+|---|---|
+| Extension activation (`src/extension.ts`) | ✅ Done — wires all M3 modules |
+| Editor shell (`src/editor/`, `src/decorations.ts`, `src/diagnostics.ts`) | ✅ Done |
+| Rig wire (`src/rig/client.ts`, `src/rig/supervisor.ts`) | ✅ Done |
+| Runtime page (`src/runtime/`) | ✅ Done — mounts `<hydra-element>` |
+| Status panel (`src/status/`) | ✅ Done — rig state integration |
+| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire |
+| Settings (`src/settings*.ts`) | ✅ Done — `rig.*` primary, `hydra.*` fallback |
+| vitest test suite (86 tests) | ✅ Done |
+| `package.json` contributes `rig.*` settings | ⏳ Pending — settings not yet declared in `contributes.configuration` |
+| Playwright runtime tests | ⏳ Pending — Phase 2 / Phase 3 |
+| Publish v1.0 | ⏳ Pending — M4 |
 
 ### Settings deprecation path
 
