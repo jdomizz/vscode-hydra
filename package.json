@@ -1,7 +1,7 @@
 {
   "name": "vscode-hydra",
-  "version": "0.3.1",
-  "displayName": "Hydra Live Code",
+  "version": "0.4.0",
+  "displayName": "Hydra Code",
   "description": "Live coding with Hydra in Visual Studio Code",
   "publisher": "jdomizz",
   "license": "AGPL-3.0-or-later",
@@ -48,6 +48,26 @@
         "title": "Stop video recording",
         "category": "Hydra",
         "icon": "$(circle-large-filled)"
+      },
+      {
+        "command": "hydra.startOscBridge",
+        "title": "Start OSC Bridge",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.stopOscBridge",
+        "title": "Stop OSC Bridge",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.startHttpServer",
+        "title": "Start HTTP Server",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.stopHttpServer",
+        "title": "Stop HTTP Server",
+        "category": "Hydra"
       }
     ],
     "keybindings": [
@@ -111,6 +131,66 @@
           "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'recording'"
         }
       ]
+    },
+    "configuration": {
+      "title": "Hydra",
+      "properties": {
+        "hydra.connectToSweep": {
+          "type": "boolean",
+          "default": false,
+          "description": "Connect to Sweep PWA for full-featured live coding (MIDI, cameras, output window)"
+        },
+        "hydra.sweepCliPath": {
+          "type": "string",
+          "default": "sweepctl",
+          "description": "Path to sweepctl executable"
+        },
+        "hydra.syncPort": {
+          "type": "number",
+          "default": 9163,
+          "description": "Port for sweep-sync WebSocket server"
+        },
+        "hydra.canvasUrl": {
+          "type": "string",
+          "default": "http://localhost:4173/canvas.html",
+          "description": "URL of Sweep canvas.html entry point"
+        },
+        "hydra.oscBridgePath": {
+          "type": "string",
+          "default": "sweep-osc-bridge",
+          "description": "Path to sweep-osc-bridge executable"
+        },
+        "hydra.oscUdpPort": {
+          "type": "number",
+          "default": 9000,
+          "description": "UDP port for OSC bridge"
+        },
+        "hydra.httpServerPath": {
+          "type": "string",
+          "default": "sweep-http",
+          "description": "Path to sweep-http executable"
+        },
+        "hydra.httpPort": {
+          "type": "number",
+          "default": 8080,
+          "description": "Port for HTTP server"
+        },
+        "hydra.httpRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Root directory for HTTP server (empty = workspace folder)"
+        },
+        "hydra.autoStartOscBridge": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start OSC bridge on activation"
+        },
+        "hydra.autoStartHttpServer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start HTTP server on activation"
+        }
+      }
     }
   },
   "scripts": {
@@ -118,27 +198,30 @@
     "compile:backend": "tsc",
     "compile:frontend": "rollup -c",
     "watch": "tsc -watch",
-    "lint": "eslint src",
+    "lint": "eslint 'src/**/*.ts'",
     "test:osc": "node demo/osc-node.js",
     "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
     "hydra-synth": "^1.3.29",
-    "osc-js": "^2.4.1",
+    "open": "^10.0.0",
     "p5": "^1.9.4"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/p5": "^1.7.6",
     "@types/vscode": "^1.88.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "@vscode/vsce": "^2.32.0",
     "eslint": "^8.57.0",
     "node-osc": "^9.1.1",
+    "osc-js": "^2.4.1",
     "ovsx": "^0.10.12",
     "rollup": "^4.60.3",
     "typescript": "^5.3.3"

@@ -4,6 +4,10 @@
 
 Extension for live coding with the [Hydra](https://hydra.ojack.xyz/) video synthesizer in Visual Studio Code and its forks.
 
+## Status
+
+Version 0.4.x is the last release of the standalone webview-only plugin. Version 1.0 (in development) migrates to the [Rig](https://github.com/jdomizz/rig) framework and supports an external browser runtime for camera/audio/MIDI. See the [migration spec](.opencode/specs/backlog/rig-plugin-rewrite.md) and the [program roadmap](https://github.com/jdomizz/vscode-hydra/blob/main/.opencode/specs/roadmap.md) for details.
+
 ## Features
 
 - Supports live coding with Hydra and JavaScript in general.
@@ -46,6 +50,15 @@ Hydra [extensions](https://github.com/hydra-synth/hydra-extensions) and external
 }
 ```
 
+## Architecture
+
+The plugin ships two rendering paths:
+
+- **Webview** — a contained quick-preview panel embedded in VS Code. Renders Hydra but cannot access camera, microphone, screen capture, or MIDI (VS Code's webview permission policy blocks `getUserMedia` and WebMIDI — see [microsoft/vscode#250568](https://github.com/microsoft/vscode/issues/250568)).
+- **Sweep mode** — spawns an external browser pointing at a `canvas.html` page. This path has full device access (camera, audio, MIDI) because it runs in a real browser, outside VS Code's sandbox.
+
+Version 1.0 formalizes this pattern: the webview becomes a contained quick-preview, and the external browser runtime becomes the primary render surface — powered by the [Rig](https://github.com/jdomizz/rig) framework.
+
 ## OSC
 
 Open Sound Control is provided by [osc-js](https://adzialocha.github.io/osc-js/) in bridge mode. It has been configured as follows:
@@ -83,7 +96,7 @@ s0.initImage('http://localhost:5500/image/hydra.jpg')
 
 ## Issues
 
-Microphones, webcams, screen capture and MIDI do not work due to the Visual Studio Code permissions policy.
+Microphones, webcams, screen capture and MIDI do not work inside the webview due to the Visual Studio Code permissions policy (see [Architecture](#architecture)). Version 1.0 will support these devices via an external browser runtime.
 If you detect any other problem, please [open an issue](https://github.com/jdomizz/vscode-hydra/issues).
 
 ## License

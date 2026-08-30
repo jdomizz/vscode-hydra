@@ -1,4 +1,9 @@
-export function createCanvas({ width, height }) {
+export interface CanvasConfig {
+    width?: number;
+    height?: number;
+}
+
+export function createCanvas({ width, height }: CanvasConfig): HTMLCanvasElement {
 
     const actualWidth = width ?? window.innerWidth * 2;
     const actualHeight = height ?? window.innerHeight * 2;
@@ -16,7 +21,7 @@ export function createCanvas({ width, height }) {
 
     document.body.appendChild(canvas);
 
-    let timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     window.addEventListener('resize', () => {
         timeout && clearTimeout(timeout);
         timeout = setTimeout(() => {
@@ -27,4 +32,3 @@ export function createCanvas({ width, height }) {
 
     return canvas;
 }
-
