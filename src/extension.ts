@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
 import { EditorService } from './backend/editor';
-import { OSCService } from './backend/osc';
 import { HydraPanel } from './backend/panel';
 import { SweepOscBridge } from './backend/sweep-osc-bridge';
 import { SweepHttpServer } from './backend/sweep-http';
+import { Status } from './status';
 
 export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('hydra');
     
     const panel = new HydraPanel(context);
     const editor = new EditorService();
-    const osc = new OSCService();
     
     // OSC Bridge
     const oscBridge = new SweepOscBridge({
@@ -26,49 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
         root: config.get<string>('httpRoot', vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd())
     });
     
-    // Status bar items
-    const oscStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    oscStatusBar.text = '$(plug) OSC: Stopped';
-    oscStatusBar.tooltip = 'Sweep OSC Bridge';
-    oscStatusBar.show();
-    
-    const httpStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
-    httpStatusBar.text = '$(globe) HTTP: Stopped';
-    httpStatusBar.tooltip = 'Sweep HTTP Server';
-    httpStatusBar.show();
-    
-    // Update status bar on events
-    oscBridge.on('log', (msg) => {
-        if (msg.includes('listening on UDP')) {
-            oscStatusBar.text = `$(plug) OSC: UDP ${oscBridge.getUdpPort()}`;
-            oscStatusBar.tooltip = `Sweep OSC Bridge - UDP Port ${oscBridge.getUdpPort()}`;
-        }
-    });
-    
-    oscBridge.on('close', () => {
-        oscStatusBar.text = '$(plug) OSC: Stopped';
-        oscStatusBar.tooltip = 'Sweep OSC Bridge';
-    });
-    
-    oscBridge.on('error', (msg) => {
-        vscode.window.showErrorMessage(`OSC Bridge error: ${msg}`);
-    });
-    
-    httpServer.on('log', (msg) => {
-        if (msg.includes('Serving')) {
-            httpStatusBar.text = `$(globe) HTTP: ${httpServer.getPort()}`;
-            httpStatusBar.tooltip = `Sweep HTTP Server - Port ${httpServer.getPort()}`;
-        }
-    });
-    
-    httpServer.on('close', () => {
-        httpStatusBar.text = '$(globe) HTTP: Stopped';
-        httpStatusBar.tooltip = 'Sweep HTTP Server';
-    });
-    
-    httpServer.on('error', (msg) => {
-        vscode.window.showErrorMessage(`HTTP Server error: ${msg}`);
-    });
+    // Single status panel
+    const status = new Status({ oscBridge, httpServer });
+    context.subscriptions.push(status);
     
     // Auto-start if configured
     if (config.get<boolean>('autoStartOscBridge', false)) {
@@ -82,8 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage(`Failed to start HTTP server: ${err.message}`);
         });
     }
-    
-    osc.open();
     
     // Register commands
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.evalDocument', () => panel.evalCode(editor.document)));
@@ -128,11 +85,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push({
         dispose: () => {
             panel.dispose();
-            osc.close();
             oscBridge.stop();
             httpServer.stop();
-            oscStatusBar.dispose();
-            httpStatusBar.dispose();
         }
     });
 }

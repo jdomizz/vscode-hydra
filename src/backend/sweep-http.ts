@@ -45,8 +45,30 @@ export class SweepHttpServer extends EventEmitter {
       this.emit('close', code);
     });
 
-    // Wait a bit to ensure process started
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for the process to signal readiness via stdout
+    await new Promise<void>((resolve, reject) => {
+      const onLog = (msg: string) => {
+        if (msg.includes('Serving')) {
+          this.off('log', onLog);
+          this.off('close', onClose);
+          clearTimeout(timer);
+          resolve();
+        }
+      };
+      const onClose = (code: number) => {
+        this.off('log', onLog);
+        clearTimeout(timer);
+        reject(new Error(`HTTP server exited before ready (code ${code})`));
+      };
+      const timer = setTimeout(() => {
+        this.off('log', onLog);
+        this.off('close', onClose);
+        reject(new Error('HTTP server ready timeout (5s)'));
+      }, 5000);
+
+      this.on('log', onLog);
+      this.once('close', onClose);
+    });
   }
 
   stop(): void {

@@ -45,6 +45,26 @@ Type definitions:
 - Runtime dependencies: `hydra-synth`, `osc-js`, `p5`
 - `demo/` is a playground with examples — not part of the extension
 - OSC ports: `41234` send, `41235` receive (bridge mode)
+- **Do not add new `hydra.*` settings.** Phase 0 introduces `rig.*` settings alongside the existing `hydra.*` ones. The `hydra.*` settings remain as backward-compatible fallbacks; `rig.*` become the primary settings in Phase 2 (v1.0). New configuration belongs under `rig.*`.
+
+## Migration: Rig (in progress)
+
+This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework. The program is tracked in the workspace program roadmap (`.opencode/specs/roadmap.md` at the workspace root) with milestones M0–M4; the plugin-specific spec is `.opencode/specs/backlog/rig-plugin-rewrite.md`.
+
+- **M0 (current):** Plugin Phase 0 — pre-Rig coherence. Single status panel, kill legacy double-OSC stack, remove 500ms readiness sleeps, add `rig.*` settings alongside `hydra.*`, fix documentation drift.
+- **M1:** Rig published — the six `@jdomizz/rig-*` packages on npm.
+- **M2:** Wire freeze — generic wire core + `panic` + `capture:*` plugin extension.
+- **M3:** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), one frontend two mounts (webview quick-preview + plugin-served runtime page in external browser), `<hydra-element>` replaces direct `hydra-synth` usage.
+- **M4:** Publish vscode-hydra v1.0.
+
+### Settings deprecation path
+
+| Setting | Status |
+|---|---|
+| `hydra.*` (existing) | Frozen. Remain as backward-compatible fallbacks. No new settings added here. |
+| `rig.*` (Phase 0+) | Primary. New settings go here. Become the only settings in v1.0 (with `hydra.*` auto-migrated). |
+
+Contributors: when adding configuration, use `rig.*`. The `hydra.*` namespace is read-only until removal in v1.0.
 
 ## Publishing
 
