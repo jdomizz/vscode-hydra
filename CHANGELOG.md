@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@jdomizz/rig-relay` (file: ref) — in-process WebSocket relay spawned by supervisor
 - `@jdomizz/rig-serve` (file: ref) — static server for the runtime bundle
 - External browser runtime as primary render surface (`<hydra-element>`, served by `rig-serve`)
+- **Dual-mount renderer** (`dual-mount-renderer.md`): `WebviewPanel` containing an `<iframe>` that loads the same served runtime page. `rig.renderer: 'webview'` (default) opens an integrated panel next to the editor; `'external'` opens the system browser. One frontend, two mounts — zero code duplication. D5 preserved (no `hydra-synth` direct imports).
+- One-time info notification when the webview mount is active (module-level flag, fires once per activation) explaining the device-access limitation and pointing to `rig.renderer: 'external'`.
 - Runtime page now uses `@jdomizz/rig-host`'s `createRigHost` instead of hand-rolled conformance (`src/runtime/main.ts`, `src/runtime/adapter.ts`)
 - Rollup runtime bundle: `src/runtime/` → `out/runtime/` (single-file output served by `rig-serve`)
 - Single status bar item with rig state (relay/http/osc/midi ports, panic, recording)
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Activation wires `RigProcessSupervisor` + rig commands end-to-end (`src/extension.ts`)
 - `RuntimeContext` interface for runtime pages
 - m4 P2 compatibility shims for 0.3.x → v1.0 upgrade:
-  - `rig.renderer: 'external' | 'webview'` toggle (default `external`; `webview` falls back to `external` since legacy webview was deleted)
+  - `rig.renderer: 'webview' | 'external'` toggle (default `webview` — integrated panel; `external` — browser with full device access). See `README.md → Renderer surfaces`.
   - `jdomizz.vscode-hydra.loadScripts` honored as `rig.loadScripts` fallback (silent); `width` / `height` silently ignored
   - 4 deprecated `hydra.*` commands re-registered as informational no-op aliases (`startOscBridge` / `stopOscBridge` / `startHttpServer` / `stopHttpServer`) — clicking them shows an info message pointing to the rig supervisor + README migration section
   - One-time "What's new in v1.0" notification on first activation (globalState-keyed; `WHATS_NEW_VERSION` constant re-triggers on v1.1, etc.)
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stage 2-4 of `rig-process-supervisor.md`: `src/rig/relay-server.ts` deleted; inline `RelayServer` and `InProcessServe` swapped for `@jdomizz/rig-relay` / `@jdomizz/rig-serve` via `file:` deps
 - vitest test suite (124 tests across 11 files)
 - `README.md` "Upgrading from 0.3.x" section: settings map, OSC port guidance (41234/41235 → 9000/9001), renderer toggle note, what's new cross-ref
+- `README.md` "Renderer surfaces" section: dual-mount explanation, when to use `webview` vs `external`, switching instructions
 - `src/manifest.spec.ts` — 8 structural parity tests (C1 commands, C2 KEY_MAP, C3 context keys, C4 README `rig.*` mentions, C5 deprecated aliases, C6 hybrid binary paths)
 
 ### Changed
@@ -39,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Old OSC bridge stack removed (was double-bind 8080 + sweep-osc-bridge)
 - `setTimeout(500)` occult waits replaced with event-driven ready detection
 - D5 invariant generalized: no `hydra-synth` direct imports anywhere in `src/`; legacy webview (`src/frontend/*`) deleted — `src/` is now exclusively editor shell + rig wire + served runtime
+- Backend bundled with esbuild as **CommonJS** (`out/extension.js`) — the format the VS Code extension host `require()`s. Replaces the tsc multi-file output (whose ESM syntax and extensionless imports broke activation) and an interim ESM bundle that relied on Node ≥22.12 `require(esm)` and a `createRequire` banner (broke on Node 18 hosts with `SyntaxError`, and on `ws`'s `require("events")` with `Dynamic require of "events" is not supported`)
+
+### Fixed
+- Extension failed to activate when launched with F5: `Dynamic require of "events" is not supported` (esbuild `__require` shim inside the ESM bundle of `ws`). Root cause + fix: CJS bundling (see Changed)
+- `open` npm package dropped from activation path — `vscode.env.openExternal` opens the runtime page instead. `open` spawned a browser on the remote host in remote workspaces (silently failing on headless servers) and its top-level `import.meta` usage made CJS bundling impossible
+- Runtime page 404: the in-process HTTP server served `process.cwd()` (the extension host's cwd — not the workspace, not the extension dir) while the extension opened `/runtime/index.html`. `RigProcessSupervisor` now takes `serveRoot` and the extension passes `<extensionPath>/out`, where `out/runtime/index.html` actually lives
+- F5 launch never completed: the watch task used `$esbuild-watch`, a problem matcher provided by the `connor4312.esbuild-problem-matchers` extension (not installed) — without it VS Code cannot track the background preLaunchTask. Replaced with a self-contained inline matcher in `.vscode/tasks.json` driven by `[esbuild] build started/finished` log lines from a plugin in `esbuild.mjs` (errors land in the Problems panel as `file(line,col): error: msg`)
+- Remote workspaces (SSH/WSL/web) got `ERR_CONNECTION_REFUSED` on the runtime page: the extension opened `http://127.0.0.1:<port>/...` in the user's browser, but the rig servers listen on the remote machine's localhost. Both the runtime page URL and the relay `ws://` URL are now resolved via `vscode.env.asExternalUri`, which establishes VS Code port-forwarding tunnels (the ws URL is tunneled through an http probe and scheme-swapped, since `asExternalUri` only supports http/https). Local workspaces are unaffected (no-op passthrough)
+- Second F5 window on the same workspace never activated (silent hang): the in-process servers' start promises never settled on `EADDRINUSE` (fixed in `@jdomizz/rig-relay` / `@jdomizz/rig-serve` — listen errors now reject). `RigProcessSupervisor` additionally falls back to an OS-assigned port when the configured `rig.relayPort` / `rig.httpPort` is busy, so multiple windows work concurrently; the status panel shows the actually-bound ports. Note: an HTTP request to the relay port (e.g. clicking it in the Ports panel) answers `WebSockets request was expected` — that is the relay correctly refusing plain HTTP, not an error
 
 ### Removed
 - `hydra-synth`, `p5` as direct dependencies (now transitive via `hydra-element`)
