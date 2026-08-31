@@ -11,6 +11,17 @@
 - `npm run package` — package as VSIX (`vsce package`)
 - `npm run test:osc` — run demo OSC node (`node demo/osc-node.js`)
 
+## Agent integration policy
+
+**No AI agent merges, fast-forwards, force-pushes, or directly commits to `main` — ever.** The agent workflow here is:
+
+1. **Branches for work.** AI agents create feature branches off `dev` (e.g. `feat/webview-mount`, `chore/esbuild-cjs`, `lane/F-plugin-v1` for the M3 lane) and iterate there.
+2. **Integration target = `dev`.** When the work is approved, the agent opens a PR or merges the feature branch into `dev`. This includes the M3 work on `lane/F-plugin-v1` — it merges to `dev`, not `main`.
+3. **`main` is human-only.** `main` only receives merges from a human reviewer. Once `main` is published (M4 publish), downstream VS Marketplace consumers pick it up; a bad agent commit there is hostile to consumers.
+4. **Tags are human-only.** Releasing a tag (e.g. `v0.4.0`) is a human-driven action; agents prepare on `dev` but never push the tag.
+
+The currently active branch should always be a feature branch or `dev`. If you find yourself sitting on `main` with uncommitted work, switch to a feature branch first (`git switch -c <topic>`) and replay the work there before pushing. Same rule across every repo in the workspace — see root AGENTS.md for the canonical statement.
+
 ## Architecture
 
 VS Code extension for live coding with Hydra video synthesizer. **Three-layer architecture** (M3 v1.0 rewrite):
