@@ -110,6 +110,45 @@ Install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ri
 s0.initImage('http://localhost:5500/image/hydra.jpg')
 ```
 
+## Upgrading from 0.3.x
+
+v1.0 swaps the editor's render surface. Where 0.3.x rendered Hydra in a VS Code webview, v1.0 ships a served runtime page (`<hydra-element>`) in an external browser. The webview is no longer the primary render surface — it was deleted in M3 closure because webviews cannot use `navigator.mediaDevices.getUserMedia` ([microsoft/vscode#250568](https://github.com/microsoft/vscode/issues/250568)), which means camera, audio reactivity, and MIDI only work in a real browser runtime. Pressing `Ctrl+Shift+Enter` now opens the served runtime URL in your browser. Your code stays in VS Code; rendering moves outside.
+
+### Settings map
+
+| 0.3.1 key | v1.0 target | What happens |
+|---|---|---|
+| `jdomizz.vscode-hydra.width` / `.height` | — | Silently ignored. The runtime window is the external browser default. |
+| `jdomizz.vscode-hydra.loadScripts` | `rig.loadScripts` | Honored as fallback; runtime loads scripts on `ready` via `<hydra-element>`'s global bridge. |
+| OSC ports 41234 / 41235 (undocumented setting, README-documented behavior) | `rig.udpIn` / `rig.udpOut` | New defaults are `9000` / `9001`. To keep your SuperCollider / Max / TouchDesigner setup, set `rig.udpIn` / `rig.udpOut` to `41234` / `41235`. |
+| (dev-only) sweep-era `hydra.*` | `rig.*` via `KEY_MAP` | Already resolved by `settings-core.ts`; dead keys pruned in v1.0. |
+
+### OSC port guidance
+
+If you were using 0.3.x's OSC bridge on the undocumented `41234` (send) / `41235` (receive) ports:
+
+- Update your SuperCollider / Max / TouchDesigner configs to point at the new defaults `9000` (in) / `9001` (out), **or**
+- Set `rig.udpIn: 41234` and `rig.udpOut: 41235` in your VS Code settings to keep the old behavior.
+
+The new defaults were chosen to avoid collision with the served runtime's HTTP port (`8080`).
+
+### Renderer toggle
+
+`rig.renderer` defaults to `'external'` (the served runtime page in your browser). If you want a contained quick-preview without devices, set `rig.renderer: 'webview'` — but note: the legacy webview was removed in v1.0; this setting is preserved for forward-compat (e.g. if a future renderer mounts a contained element) and currently falls back to `'external'` with an info message.
+
+### Deprecated commands
+
+The following 0.3.x commands are still in the palette but are now informational no-ops:
+
+- `hydra.startOscBridge`, `hydra.stopOscBridge` — the rig supervisor starts the OSC bridge automatically; these are no-ops.
+- `hydra.startHttpServer`, `hydra.stopHttpServer` — same; the HTTP server (which serves the runtime page) starts automatically.
+
+They will be removed in a future minor version. For now, they exist to preserve muscle-memory.
+
+### What's new notification
+
+On first activation of v1.0, you'll see a one-time notification with this same content. To suppress, set `vscode-hydra.suppressWhatsNew: true` in your settings (or run `vscode-hydra.dismissWhatsNew`).
+
 ## Issues
 
 Camera, microphone, screen capture, and MIDI do not work inside the VS Code webview due to the permissions policy ([microsoft/vscode#250568](https://github.com/microsoft/vscode/issues/250568)). Use the **external browser runtime** (click the status bar item → "Open runtime") for full device access.
