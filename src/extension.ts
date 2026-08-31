@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as os from "node:os";
 import * as path from "node:path";
 import { getRigSettings, onSettingsChanged } from "./settings.js";
 import { EditorService } from "./editor/index.js";
@@ -205,15 +206,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         const result = await capture.captureImage();
         if (result.ok) {
-          vscode.window.showInformationMessage(
-            "Screenshot triggered — check the browser Downloads folder",
-          );
+          status.markCaptured();
+          vscode.window.showInformationMessage("Screenshot saved to your browser Downloads folder");
         } else {
           vscode.window.showErrorMessage("Screenshot failed");
         }
       } catch (err) {
         vscode.window.showErrorMessage(`Screenshot failed: ${(err as Error).message}`);
       }
+    }),
+  );
+
+  // Open the user's Downloads folder in the OS file manager. The
+  // runtime downloads captures there (per the capture-download model).
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-hydra.openDownloadsFolder", () => {
+      const downloads = path.join(os.homedir(), "Downloads");
+      return vscode.env.openExternal(vscode.Uri.file(downloads));
     }),
   );
 

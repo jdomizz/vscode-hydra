@@ -60,6 +60,11 @@
         "category": "Hydra"
       },
       {
+        "command": "vscode-hydra.openDownloadsFolder",
+        "title": "Open downloads folder",
+        "category": "Hydra"
+      },
+      {
         "command": "hydra.startOscBridge",
         "title": "[deprecated] Start OSC bridge — use rig.* instead",
         "category": "Hydra"

@@ -15,6 +15,12 @@ export interface RigStatusState {
   midi?: { enabled: boolean; connected: boolean };
   panic: boolean;
   recording: boolean;
+  /**
+   * Timestamp of the last successful screenshot. Set editor-side on
+   * captureImage success (the wire doesn't ack capture:image). The
+   * status tooltip renders a "last screenshot: Ns ago" line.
+   */
+  lastCaptureAt?: number;
   runtimeUrl?: string;
 }
 
@@ -64,6 +70,18 @@ export class StatusPanel implements vscode.Disposable {
    */
   update(state: RigStatusState): void {
     this.#state = state;
+    this.#render();
+  }
+
+  /**
+   * Mark a screenshot as having been captured. The panel remembers the
+   * timestamp and renders it in the tooltip ("last screenshot: Ns ago")
+   * until the next call. Call this after a successful `capture:image`
+   * round-trip; the wire does not ack `capture:image` so we track it
+   * editor-side.
+   */
+  markCaptured(): void {
+    this.#state.lastCaptureAt = Date.now();
     this.#render();
   }
 
@@ -182,6 +200,13 @@ export class StatusPanel implements vscode.Disposable {
       md.appendMarkdown("$(record) **Recording** in progress\n");
     }
 
+    if (this.#state.lastCaptureAt) {
+      md.appendMarkdown("\n---\n\n");
+      md.appendMarkdown(
+        `$(device-camera) **Last screenshot** ${formatAgo(this.#state.lastCaptureAt)}`,
+      );
+    }
+
     if (this.#state.runtimeUrl) {
       md.appendMarkdown("\n---\n\n");
       md.appendMarkdown(`[Open runtime](${this.#state.runtimeUrl})`);
@@ -199,3 +224,17 @@ export class StatusPanel implements vscode.Disposable {
  * The alias preserves the old export for any code that imports `Status`.
  */
 export { StatusPanel as Status };
+
+/**
+ * Format a timestamp as a short "Ns ago / Nm ago / Nh ago" relative
+ * time string. Used for the "last screenshot" tooltip line.
+ */
+function formatAgo(ts: number, now: number = Date.now()): string {
+  const sec = Math.max(0, Math.floor((now - ts) / 1000));
+  if (sec < 5) return "just now";
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  return `${hr}h ago`;
+}
