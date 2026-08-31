@@ -18,11 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Single status bar item with rig state (relay/http/osc/midi ports, panic, recording)
 - Eval-flash decoration + diagnostics (Problems panel integration)
 - Capture pipeline: `capture:image|start|stop` over wire + out-of-band HTTP blobs; `BlobReceiver` handles inbound blobs at `src/capture/transport.ts`
-- `rig.*` settings namespace with `hydra.*` fallback (`rig.instrument`, `rig.target`, `rig.relayPort`, `rig.httpPort`, `rig.udpIn/Out`, `rig.midiEnabled`, `rig.*Path`)
+- `rig.*` settings namespace with `hydra.*` fallback (`rig.instrument`, `rig.target`, `rig.renderer`, `rig.relayPort`, `rig.httpPort`, `rig.udpIn/Out`, `rig.midiEnabled`, `rig.*Path`)
 - `RigProcessSupervisor`: in-process rig-relay + rig-serve by default; hybrid mode via `rig.*Path` settings; wired at activation with manifest reconciliation
 - Activation wires `RigProcessSupervisor` + `BlobReceiver` + rig commands end-to-end (`src/extension.ts`)
 - `RuntimeContext` interface for runtime pages
+- m4 P2 compatibility shims for 0.3.x → v1.0 upgrade:
+  - `rig.renderer: 'external' | 'webview'` toggle (default `external`; `webview` falls back to `external` since legacy webview was deleted)
+  - `jdomizz.vscode-hydra.loadScripts` honored as `rig.loadScripts` fallback (silent); `width` / `height` silently ignored
+  - 4 deprecated `hydra.*` commands re-registered as informational no-op aliases (`startOscBridge` / `stopOscBridge` / `startHttpServer` / `stopHttpServer`) — clicking them shows an info message pointing to the rig supervisor + README migration section
+  - One-time "What's new in v1.0" notification on first activation (globalState-keyed; `WHATS_NEW_VERSION` constant re-triggers on v1.1, etc.)
+  - One-time settings-migration notice when any 0.3.x `jdomizz.vscode-hydra.*` key is detected
+- Stage 2-4 of `rig-process-supervisor.md`: `src/rig/relay-server.ts` deleted; inline `RelayServer` and `InProcessServe` swapped for `@jdomizz/rig-relay` / `@jdomizz/rig-serve` via `file:` deps
 - vitest test suite (124 tests across 11 files)
+- `README.md` "Upgrading from 0.3.x" section: settings map, OSC port guidance (41234/41235 → 9000/9001), renderer toggle note, what's new cross-ref
+- `src/manifest.spec.ts` — 8 structural parity tests (C1 commands, C2 KEY_MAP, C3 context keys, C4 README `rig.*` mentions, C5 deprecated aliases, C6 hybrid binary paths)
 
 ### Changed
 - Plugin is now a thin editor shell — no longer renders Hydra itself in production
