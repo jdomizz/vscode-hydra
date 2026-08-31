@@ -1,4 +1,4 @@
-# 🧩 Hydra Live Code
+# 🧩 Hydra Code
 
 ![demo](./media/demo.gif)
 
@@ -6,36 +6,21 @@ Extension for live coding with the [Hydra](https://hydra.ojack.xyz/) video synth
 
 ## Status
 
-**v0.4.x is the last release of the standalone webview plugin.** Version 1.0 (in development on `lane/F-plugin-v1`) is a thin editor shell over the [Rig](https://github.com/jdomizz/rig) framework. The plugin ships **two peer renderer surfaces** — pick the one that fits your workflow:
+**Published: 0.3.1** (as "Hydra Live Code") on the VS Marketplace and Open VSX.
+**Next: 0.4.0 — "Hydra Code"** — a thin editor shell over the
+[Rig](https://github.com/jdomizz/rig) framework, with **two peer renderer
+surfaces** — pick the one that fits your workflow:
 
 - **`webview`** (default) — integrated panel next to the editor; no device access. See [Renderer surfaces](#renderer-surfaces) below.
 - **`external`** — opens the runtime page in your default browser; camera, audio, and MIDI work there.
 
-See the workspace program's roadmap and specs at `/home/domi/code/.opencode/specs/vscode-hydra/` (private workspace registry — not browsable here). Implementation milestones are tracked in CHANGELOG.md.
+Upgrading from 0.3.x? See [Upgrading from 0.3.x](#upgrading-from-03x).
 
-## Architecture
+## Documentation
 
-The plugin is three layers:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. EDITOR SHELL (the extension)                             │
-│    eval commands, extraction, diagnostics, decorations,     │
-│    single status bar panel, RigProcessSupervisor            │
-├─────────────────────────────────────────────────────────────┤
-│ 2. RIG WIRE (one transport)                                 │
-│    RigWire → @jdomizz/rig-transport (TransportClient)       │
-│    rig-relay in-process (spawned in hybrid mode)            │
-├─────────────────────────────────────────────────────────────┤
-│ 3. RENDERER (rig.renderer)                                  │
-│    webview iframe (default, integrated panel) ← rig-serve   │
-│    external browser (peer surface, full device access)      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-- **Editor shell** — commands, document/line/block/selection/expression extraction, eval-flash decorations, diagnostics (Problems panel), single status bar item, capture pipeline.
-- **Rig wire** — `RigWire` wraps `TransportClient` from `@jdomizz/rig-transport`. One JSON-over-WS protocol; no socket.io, no stdio framing, no WebRTC.
-- **Renderer** — the plugin serves a runtime page at `http://localhost:<httpPort>/runtime/` that mounts `<hydra-element>` (D5: the runtime frontend never imports `hydra-synth` directly). The same page is mounted in two surfaces: a VS Code webview (default, `<iframe>` inside a `WebviewPanel`) or the system browser (via `vscode.env.openExternal`). The wire is the platform; the page is just a host. See [Renderer surfaces](#renderer-surfaces) below.
+- [CHANGELOG](./CHANGELOG.md) — release history
+- [ARCHITECTURE](./ARCHITECTURE.md) — how the extension is put together (the three layers, the rig wire, the renderer surfaces)
+- [CONTRIBUTING](./CONTRIBUTING.md) — development: setup, commands, testing, workflow
 
 ## Features
 
@@ -87,8 +72,6 @@ To override the default in your VS Code settings:
 - [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jdomizz.vscode-hydra)
 - [Open VSX Registry](https://open-vsx.org/extension/jdomizz/vscode-hydra)
 - [VSIX file](https://github.com/jdomizz/vscode-hydra/releases)
-
-> **Note:** v0.4.x is the current published version. v1.0 (M3) is in development.
 
 ## Commands
 
@@ -148,19 +131,19 @@ s0.initImage('http://localhost:5500/image/hydra.jpg')
 
 ## Upgrading from 0.3.x
 
-v1.0 brings back the integrated webview panel as the **default** renderer. Where 0.3.x rendered Hydra in a VS Code webview and v1.0 (initial release) shipped only an external browser, v1.0 ships **both surfaces** — pick whichever fits your workflow. See [Renderer surfaces](#renderer-surfaces) above.
+0.4.0 brings back the integrated webview panel as the **default** renderer. Where 0.3.x rendered Hydra in a VS Code webview, 0.4.0 ships **both surfaces** — pick whichever fits your workflow. See [Renderer surfaces](#renderer-surfaces) above.
 
 - The webview mount is implemented as an `<iframe>` inside a `WebviewPanel`. It loads the same served runtime page (`<hydra-element>`) the browser opens. No code duplication, no new bundle.
 - Camera, audio, and MIDI only work in the **external browser** surface (see [microsoft/vscode#250568](https://github.com/microsoft/vscode/issues/250568)). Set `rig.renderer: 'external'` if you need those.
 
 ### Settings map
 
-| 0.3.1 key | v1.0 target | What happens |
+| 0.3.1 key | 0.4.0 target | What happens |
 |---|---|---|
 | `jdomizz.vscode-hydra.width` / `.height` | — | Silently ignored. The runtime window is the browser default; the webview iframe is responsive. |
 | `jdomizz.vscode-hydra.loadScripts` | `rig.loadScripts` | Honored as fallback; runtime loads scripts on `ready` via `<hydra-element>`'s global bridge. |
 | OSC ports 41234 / 41235 (undocumented setting, README-documented behavior) | `rig.udpIn` / `rig.udpOut` | New defaults are `9000` / `9001`. To keep your SuperCollider / Max / TouchDesigner setup, set `rig.udpIn` / `rig.udpOut` to `41234` / `41235`. |
-| (dev-only) sweep-era `hydra.*` | `rig.*` via `KEY_MAP` | Already resolved by `settings-core.ts`; dead keys pruned in v1.0. |
+| (dev-only) sweep-era `hydra.*` | `rig.*` via `KEY_MAP` | Already resolved by `settings-core.ts`; dead keys pruned in 0.4.0. |
 
 ### OSC port guidance
 
@@ -186,7 +169,7 @@ They will be removed in a future minor version. For now, they exist to preserve 
 
 ### What's new notification
 
-On first activation of v1.0, you'll see a one-time notification with this same content. To suppress, set `vscode-hydra.suppressWhatsNew: true` in your settings (or run `vscode-hydra.dismissWhatsNew`).
+On first activation of 0.4.0, you'll see a one-time notification with this same content. To suppress, set `vscode-hydra.suppressWhatsNew: true` in your settings (or run `vscode-hydra.dismissWhatsNew`).
 
 ## Issues
 

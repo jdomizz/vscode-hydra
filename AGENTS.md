@@ -24,54 +24,9 @@ The currently active branch should always be a feature branch or `dev`. If you f
 
 ## Architecture
 
-VS Code extension for live coding with Hydra video synthesizer. **Three-layer architecture** (Rig rewrite — ships as 0.4.0):
+VS Code extension for live coding with the Hydra video synthesizer — a thin editor shell over the Rig wire. Three layers: **editor shell** (commands, extraction, diagnostics, status panel, capture pipeline) / **rig wire** (`RigWire` over `TransportClient`; `RigProcessSupervisor` starts relay + serve in-process) / **renderer** (a served runtime page mounting `<hydra-element>`, mounted in a webview iframe by default or in the system browser via `rig.renderer`).
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. EDITOR SHELL (the extension)                             │
-│    eval commands, extraction, diagnostics, decorations,     │
-│    single status bar panel, RigProcessSupervisor            │
-├─────────────────────────────────────────────────────────────┤
-│ 2. RIG WIRE (one transport)                                 │
-│    RigWire → @jdomizz/rig-transport (TransportClient)       │
-│    rig-relay in-process (spawned in hybrid mode)            │
-├─────────────────────────────────────────────────────────────┤
-│ 3. RENDERER (rig.renderer)                                  │
-│    webview iframe (default, integrated panel) ← rig-serve   │
-│    external browser (peer surface, full device access)      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Layer 1 — Editor shell (`src/editor/`, `src/diagnostics.ts`, `src/decorations.ts`, `src/status/`, `src/capture/`)
-
-- `src/extension.ts` — activation, command registration, wires all rewrite modules
-- `src/editor/extract.ts` — document/line/block/selection extraction (pure)
-- `src/editor/index.ts` — `EditorService` (VS Code integration)
-- `src/decorations.ts` — eval-flash + error decorations
-- `src/diagnostics.ts` — `vscode.Diagnostic` collection (Problems panel)
-- `src/status/index.ts` — `StatusPanel` (single status bar item, rig state, ports tooltip, open-runtime link)
-- `src/capture/pipeline.ts` — `CapturePipeline` (`capture:image|start|stop` over wire; the runtime page triggers a browser download for delivery)
-
-### Layer 2 — Rig wire (`src/rig/`, `src/settings*.ts`)
-
-- `src/rig/client.ts` — `RigWire` (wraps `TransportClient` from `@jdomizz/rig-transport`)
-- `src/rig/supervisor.ts` — `RigProcessSupervisor` (in-process relay + serve by default; hybrid mode via `rig.*Path`; `serveRoot` option — the extension passes `<extensionPath>/out`; on `EADDRINUSE` the in-process services fall back to an OS-assigned port so multiple windows coexist)
-- `src/settings-core.ts` — pure settings resolver (`rig.*` primary, `hydra.*` fallback)
-- `src/settings.ts` — VS Code configuration integration
-
-### Layer 3 — Renderer (`src/runtime/`, `src/webview/`)
-
-- `src/runtime/index.html` — served runtime page
-- `src/runtime/main.ts` — mounts `<hydra-element>`, connects via `@jdomizz/rig-host`'s `createRigHost`
-- `src/runtime/adapter.ts` — `createHydraEngine(el)` bridges `<hydra-element>` to rig-host's `HostEngine` seam
-- `src/webview/panel.ts` — `RuntimeWebviewPanel`: `WebviewPanel` containing an `<iframe>` that loads the served runtime page. Used when `rig.renderer === 'webview'` (the default). The same served page works in both mounts — no duplicated logic.
-
-### Type definitions (`src/types/`)
-
-- `src/types/hydra-synth.d.ts` — hydra-synth DSL types (from feat/types branch)
-- `src/types/hydra-element.d.ts` — type shim for `hydra-element` (ships JS only)
-- `src/types/global.d.ts` — global type declarations for hydra sketches
-- `src/types/glsl/glsl-functions.d.ts` — GLSL transform catalog types
+Full map, invariants, and file index: [ARCHITECTURE.md](./ARCHITECTURE.md). Dev setup and commands: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Conventions
 
@@ -105,16 +60,7 @@ No file in `src/` may import `hydra-synth` directly. The codebase uses `<hydra-e
 git grep "from 'hydra-synth'" src/
 ```
 
-The legacy webview (`src/frontend/`) was deleted during the rewrite's P0 closure. `hydra-synth` remains a transitive dependency of `hydra-element`; the served runtime page is the sole render surface, mounted either inside a `WebviewPanel` iframe (`rig.renderer: 'webview'`, default) or in the system browser (`rig.renderer: 'external'`). See [Renderer surfaces](#renderer-surfaces) below.
-
-### Renderer surfaces
-
-The plugin mounts the served runtime page in one of two surfaces, controlled by `rig.renderer`:
-
-- **`webview` (default)** — `RuntimeWebviewPanel` creates a `WebviewPanel` whose body is an `<iframe>` pointing at the resolved runtime URL. CSP is derived dynamically from the URL's origin (works for localhost, SSH/WSL tunnels, and VS Code for the Web). No camera/audio/MIDI per [microsoft/vscode#250568](https://github.com/microsoft/vscode/issues/250568) — set `rig.renderer: 'external'` to use devices.
-- **`external`** — `vscode.env.openExternal()` opens the resolved runtime URL in the system browser. Audio/MIDI/camera work normally.
-
-`vscode-hydra.openRuntime` (status bar item / command palette) honors the active renderer. The wire is shared across both mounts — eval, panic, and capture work identically.
+The legacy webview (`src/frontend/`) was deleted during the rewrite's P0 closure. `hydra-synth` remains a transitive dependency of `hydra-element`; the served runtime page is the sole render surface, mounted in a webview iframe (default) or the system browser — details in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Testing
 
@@ -173,7 +119,7 @@ When implementing a spec landed in this repo:
 2. Implement according to the spec's "Done when" criteria
 3. User reviews and approves
 4. Move to `archive/` in the registry, append `## Status: accepted` with the commit hash
-5. Update this repo's docs if the change affects it: README status, CHANGELOG entry, AGENTS.md
+5. Update this repo's docs if the change affects them: CHANGELOG, README, ARCHITECTURE, CONTRIBUTING, AGENTS — only the ones the change actually touches
 6. Commit the registry repo alongside this repo's commit
 
 Cross-project developments (e.g. the Rig program) are sequenced and decided in
@@ -182,9 +128,11 @@ the authoritative program index.
 
 When a spec (or any feature/fix) is finished and approved, **update the docs** before considering it done:
 
-- **README** — reflect any new/changed features, usage, or status
 - **CHANGELOG** — add an entry describing the change (follow its existing format)
-- **AGENTS.md** — amend if the change affects commands, dependencies, architecture, or workflow
+- **README** — reflect any new/changed features, usage, or status
+- **ARCHITECTURE** — amend if the implementation shape changed
+- **CONTRIBUTING** — amend if setup, commands, or workflow changed
+- **AGENTS** — amend if commands, dependencies, architecture, or workflow changed
 - Only update each doc if it's actually affected by the change; don't pad with noise
 
 **Important:** Specs can only move to `archive/` after explicit user approval, even if implementation is complete.
