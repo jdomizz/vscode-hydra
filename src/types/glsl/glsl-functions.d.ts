@@ -9,7 +9,7 @@
  * - `'combine'`:      `vec4(vec4 _c0, vec4 _c1, ...)` — blend with a texture
  * - `'combineCoord'`: `vec2(vec2 _st, vec4 _c0, ...)` — modulate by a texture
  */
-export type GlslFunctionType = 'src' | 'coord' | 'color' | 'combine' | 'combineCoord';
+export type GlslFunctionType = "src" | "coord" | "color" | "combine" | "combineCoord";
 
 /** A transform input parameter. */
 export interface GlslInput {

@@ -50,23 +50,38 @@
         "icon": "$(circle-large-filled)"
       },
       {
+        "command": "vscode-hydra.openRuntime",
+        "title": "Open runtime in browser",
+        "category": "Hydra"
+      },
+      {
+        "command": "vscode-hydra.panic",
+        "title": "Panic — silence all outputs",
+        "category": "Hydra"
+      },
+      {
+        "command": "vscode-hydra.openDownloadsFolder",
+        "title": "Open downloads folder",
+        "category": "Hydra"
+      },
+      {
         "command": "hydra.startOscBridge",
-        "title": "Start OSC Bridge",
+        "title": "[deprecated] Start OSC bridge — use rig.* instead",
         "category": "Hydra"
       },
       {
         "command": "hydra.stopOscBridge",
-        "title": "Stop OSC Bridge",
+        "title": "[deprecated] Stop OSC bridge — use rig.* instead",
         "category": "Hydra"
       },
       {
         "command": "hydra.startHttpServer",
-        "title": "Start HTTP Server",
+        "title": "[deprecated] Start HTTP server — use rig.* instead",
         "category": "Hydra"
       },
       {
         "command": "hydra.stopHttpServer",
-        "title": "Stop HTTP Server",
+        "title": "[deprecated] Stop HTTP server — use rig.* instead",
         "category": "Hydra"
       }
     ],
@@ -118,113 +133,186 @@
         {
           "command": "vscode-hydra.captureImage",
           "group": "navigation",
-          "when": "activeWebviewPanelId == 'vscode-hydra.panel'"
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'rendering'"
         },
         {
           "command": "vscode-hydra.startRecorder",
           "group": "navigation",
-          "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'rendering'"
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'rendering'"
         },
         {
           "command": "vscode-hydra.stopRecorder",
           "group": "navigation",
-          "when": "activeWebviewPanelId == 'vscode-hydra.panel' && vscode-hydra.status == 'recording'"
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'recording'"
         }
       ]
     },
     "configuration": {
       "title": "Hydra",
       "properties": {
-        "hydra.connectToSweep": {
+        "rig.instrument": {
+          "type": "string",
+          "default": "sweep",
+          "enum": [
+            "sweep",
+            "cycles"
+          ],
+          "description": "Instrument (sweep or future cycles)"
+        },
+        "rig.target": {
+          "type": "string",
+          "default": "default",
+          "enum": [
+            "sweep",
+            "hydra",
+            "default"
+          ],
+          "description": "Runtime profile → ?context= URL param"
+        },
+        "rig.renderer": {
+          "type": "string",
+          "default": "webview",
+          "enum": [
+            "webview",
+            "external"
+          ],
+          "description": "Renderer surface. `webview` (default) shows an integrated panel next to the editor — camera/audio/MIDI are not available there. `external` opens the served runtime page in your browser (the only surface with full device access). See README → Renderer surfaces."
+        },
+        "rig.relayPort": {
+          "type": "number",
+          "default": 9163,
+          "description": "WebSocket relay port"
+        },
+        "rig.httpPort": {
+          "type": "number",
+          "default": 8080,
+          "description": "HTTP server port (serves runtime page + workspace assets)"
+        },
+        "rig.udpIn": {
+          "type": "number",
+          "default": 9000,
+          "description": "OSC UDP in port"
+        },
+        "rig.udpOut": {
+          "type": "number",
+          "default": 9001,
+          "description": "OSC UDP out port"
+        },
+        "rig.midiEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Connect to Sweep PWA for full-featured live coding (MIDI, cameras, output window)"
+          "description": "Enable MIDI bridge"
         },
-        "hydra.sweepCliPath": {
+        "rig.sweepCliPath": {
           "type": "string",
           "default": "sweepctl",
           "description": "Path to sweepctl executable"
         },
+        "rig.oscBridgePath": {
+          "type": "string",
+          "default": "sweep-osc-bridge",
+          "description": "Path to OSC bridge binary"
+        },
+        "rig.midiBridgePath": {
+          "type": "string",
+          "default": "sweep-midi-bridge",
+          "description": "Path to MIDI bridge binary"
+        },
+        "rig.httpServerPath": {
+          "type": "string",
+          "default": "sweep-http",
+          "description": "Path to HTTP server binary"
+        },
+        "rig.relayPath": {
+          "type": "string",
+          "default": "rig-relay",
+          "description": "Path to external relay binary (hybrid mode)"
+        },
+        "rig.servePath": {
+          "type": "string",
+          "default": "rig-serve",
+          "description": "Path to external serve binary (hybrid mode)"
+        },
+        "rig.loadScripts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "JavaScript URLs to load on runtime ready (extensions, libraries)"
+        },
+        "hydra.sweepCliPath": {
+          "type": "string",
+          "default": "sweepctl",
+          "description": "(Legacy fallback for rig.sweepCliPath)"
+        },
         "hydra.syncPort": {
           "type": "number",
           "default": 9163,
-          "description": "Port for sweep-sync WebSocket server"
-        },
-        "hydra.canvasUrl": {
-          "type": "string",
-          "default": "http://localhost:4173/canvas.html",
-          "description": "URL of Sweep canvas.html entry point"
+          "description": "(Legacy fallback for rig.relayPort)"
         },
         "hydra.oscBridgePath": {
           "type": "string",
           "default": "sweep-osc-bridge",
-          "description": "Path to sweep-osc-bridge executable"
+          "description": "(Legacy fallback for rig.oscBridgePath)"
         },
         "hydra.oscUdpPort": {
           "type": "number",
           "default": 9000,
-          "description": "UDP port for OSC bridge"
+          "description": "(Legacy fallback for rig.udpIn)"
         },
         "hydra.httpServerPath": {
           "type": "string",
           "default": "sweep-http",
-          "description": "Path to sweep-http executable"
+          "description": "(Legacy fallback for rig.httpServerPath)"
         },
         "hydra.httpPort": {
           "type": "number",
           "default": 8080,
-          "description": "Port for HTTP server"
-        },
-        "hydra.httpRoot": {
-          "type": "string",
-          "default": "",
-          "description": "Root directory for HTTP server (empty = workspace folder)"
-        },
-        "hydra.autoStartOscBridge": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically start OSC bridge on activation"
-        },
-        "hydra.autoStartHttpServer": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically start HTTP server on activation"
+          "description": "(Legacy fallback for rig.httpPort)"
         }
       }
     }
   },
   "scripts": {
-    "compile": "npm run compile:backend && npm run compile:frontend",
-    "compile:backend": "tsc",
-    "compile:frontend": "rollup -c",
-    "watch": "tsc -watch",
-    "lint": "eslint src",
+    "compile": "node esbuild.mjs --production && npm run compile:runtime",
+    "compile:dev": "node esbuild.mjs && npm run compile:runtime",
+    "compile:runtime": "node -e \"require('node:fs').mkdirSync('out/runtime',{recursive:true});require('node:fs').copyFileSync('src/runtime/index.html','out/runtime/index.html')\" && rollup -c",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint 'src/**/*.ts'",
+    "test": "vitest run",
     "test:osc": "node demo/osc-node.js",
     "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
-    "hydra-synth": "^1.3.29",
-    "open": "^10.0.0",
-    "osc-js": "^2.4.1",
-    "p5": "^1.9.4"
+    "@jdomizz/rig-capture": "file:../rig/packages/rig-capture",
+    "@jdomizz/rig-host": "file:../rig/packages/rig-host",
+    "@jdomizz/rig-relay": "file:../rig/packages/rig-relay",
+    "@jdomizz/rig-serve": "file:../rig/packages/rig-serve",
+    "@jdomizz/rig-transport": "file:../rig/packages/rig-transport",
+    "hydra-element": "file:../hydra-element",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "@types/p5": "^1.7.6",
+    "@types/node": "^22.0.0",
     "@types/vscode": "^1.88.0",
+    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.28.2",
     "eslint": "^8.57.0",
     "node-osc": "^9.1.1",
+    "osc-js": "^2.4.1",
     "ovsx": "^0.10.12",
     "rollup": "^4.60.3",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.10"
   },
   "repository": {
     "type": "git",

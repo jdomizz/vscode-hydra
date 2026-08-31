@@ -4,7 +4,7 @@
 // declarations in global.d.ts (single source of truth for the DSL).
 
 /** Shader floating-point precision ('mediump' by default, 'highp' on iOS). */
-export type Precision = 'lowp' | 'mediump' | 'highp';
+export type Precision = "lowp" | "mediump" | "highp";
 
 /**
  * Options for the HydraRenderer constructor. All optional; defaults shown.
@@ -189,9 +189,9 @@ export interface Synth {
  * audio analyzer and synth context.
  *
  * ```js
- * import Hydra from 'hydra-synth'
+ * // library mode: use hydra.synth.*
  * const hydra = new Hydra({ width: 1280, height: 720 })
- * hydra.synth.osc(20).out()   // library mode: use hydra.synth.*
+ * hydra.synth.osc(20).out()
  * ```
  */
 export default class HydraRenderer {
@@ -323,7 +323,12 @@ interface GeneratorFactory {
    * `{ name: 'myFx', type: 'color', inputs: [{ name: 'amount', type: 'float', default: 1 }], glsl: 'return _c0 * amount;' }`.
    * @param obj - the transform/generator definition (see glsl-functions.js)
    */
-  setFunction(obj: { name: string; type: string; inputs: Array<{ name: string; type: string; default: any }>; glsl: string }): void;
+  setFunction(obj: {
+    name: string;
+    type: string;
+    inputs: Array<{ name: string; type: string; default: any }>;
+    glsl: string;
+  }): void;
 }
 
 /**

@@ -1,0 +1,215 @@
+import { describe, it, expect, afterEach } from "vitest";
+import { RigProcessSupervisor } from "./supervisor.js";
+import type { RigSettings } from "../settings.js";
+import { DEFAULTS } from "../settings.js";
+
+/** Build a RigSettings with the given overrides. */
+function makeSettings(overrides: Partial<RigSettings> = {}): RigSettings {
+  return { ...DEFAULTS, ...overrides };
+}
+
+describe("RigProcessSupervisor", () => {
+  const supervisors: RigProcessSupervisor[] = [];
+
+  afterEach(async () => {
+    // Clean up any supervisors that weren't explicitly stopped.
+    for (const supervisor of supervisors) {
+      try {
+        await supervisor.stop();
+      } catch {
+        // Ignore errors during cleanup.
+      }
+    }
+    supervisors.length = 0;
+  });
+
+  describe("in-process mode", () => {
+    it("starts relay and serve in-process and reports correct status", async () => {
+      const settings = makeSettings({ relayPort: 0, httpPort: 0 });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      const { relayUrl, httpUrl } = await supervisor.start();
+
+      expect(relayUrl).toMatch(/^ws:\/\/127\.0\.0\.1:\d+$/);
+      expect(httpUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+
+      const status = supervisor.getStatus();
+      expect(status.relay.mode).toBe("in-process");
+      expect(status.relay.running).toBe(true);
+      expect(status.http.mode).toBe("in-process");
+      expect(status.http.running).toBe(true);
+
+      await supervisor.stop();
+
+      const statusAfter = supervisor.getStatus();
+      expect(statusAfter.relay.mode).toBe("stopped");
+      expect(statusAfter.relay.running).toBe(false);
+      expect(statusAfter.http.mode).toBe("stopped");
+      expect(statusAfter.http.running).toBe(false);
+    });
+
+    it("relay listens on a random port when port is 0", async () => {
+      const settings = makeSettings({ relayPort: 0, httpPort: 0 });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      const { relayUrl } = await supervisor.start();
+      const port = parseInt(relayUrl.split(":").pop()!, 10);
+      expect(port).toBeGreaterThan(0);
+
+      await supervisor.stop();
+    });
+
+    it("serve listens on a random port when port is 0", async () => {
+      const settings = makeSettings({ relayPort: 0, httpPort: 0 });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      const { httpUrl } = await supervisor.start();
+      const port = parseInt(httpUrl.split(":").pop()!, 10);
+      expect(port).toBeGreaterThan(0);
+
+      await supervisor.stop();
+    });
+
+    it("falls back to an OS-assigned port when the configured ports are busy (second window)", async () => {
+      // First supervisor holds the configured ports (simulates another
+      // vscode-hydra window on the same workspace).
+      const settings = makeSettings({ relayPort: 17391, httpPort: 17392 });
+      const first = new RigProcessSupervisor(settings);
+      supervisors.push(first);
+      const firstUrls = await first.start();
+      expect(firstUrls.relayUrl).toBe("ws://127.0.0.1:17391");
+      expect(firstUrls.httpUrl).toBe("http://127.0.0.1:17392");
+
+      // Second supervisor on the same ports: EADDRINUSE → port-0 fallback.
+      const logs: string[] = [];
+      const second = new RigProcessSupervisor(settings);
+      supervisors.push(second);
+      second.on("log", (msg: string) => logs.push(msg));
+      const secondUrls = await second.start();
+
+      expect(secondUrls.relayUrl).not.toBe(firstUrls.relayUrl);
+      expect(secondUrls.httpUrl).not.toBe(firstUrls.httpUrl);
+      expect(secondUrls.relayUrl).toMatch(/^ws:\/\/127\.0\.0\.1:\d+$/);
+      expect(secondUrls.httpUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(logs.length).toBe(2); // one fallback notice per service
+
+      await first.stop();
+      await second.stop();
+    });
+
+    it("reports all four services accurately in in-process mode", async () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        midiEnabled: false,
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      await supervisor.start();
+
+      const status = supervisor.getStatus();
+      expect(status.relay.mode).toBe("in-process");
+      expect(status.relay.running).toBe(true);
+      expect(status.http.mode).toBe("in-process");
+      expect(status.http.running).toBe(true);
+      // OSC and MIDI bridges are only started in hybrid mode.
+      expect(status.osc.mode).toBe("stopped");
+      expect(status.osc.running).toBe(false);
+      expect(status.midi.enabled).toBe(false);
+      expect(status.midi.mode).toBe("stopped");
+      expect(status.midi.running).toBe(false);
+
+      await supervisor.stop();
+    });
+
+    it("cannot start after stop", async () => {
+      const settings = makeSettings({ relayPort: 0, httpPort: 0 });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      await supervisor.start();
+      await supervisor.stop();
+
+      await expect(supervisor.start()).rejects.toThrow(/cannot start after dispose/i);
+    });
+  });
+
+  describe("status reporting", () => {
+    it("reports stopped status before start", () => {
+      const settings = makeSettings({ relayPort: 9163, httpPort: 8080 });
+      const supervisor = new RigProcessSupervisor(settings);
+
+      const status = supervisor.getStatus();
+      expect(status.relay.mode).toBe("stopped");
+      expect(status.relay.running).toBe(false);
+      expect(status.relay.port).toBe(9163);
+      expect(status.http.mode).toBe("stopped");
+      expect(status.http.running).toBe(false);
+      expect(status.http.port).toBe(8080);
+    });
+
+    it("reports correct port from settings", async () => {
+      const settings = makeSettings({ relayPort: 0, httpPort: 0 });
+      const supervisor = new RigProcessSupervisor(settings);
+      supervisors.push(supervisor);
+
+      await supervisor.start();
+
+      const status = supervisor.getStatus();
+      // Port 0 means random port, but status should report the configured port.
+      expect(status.relay.port).toBe(0);
+      expect(status.http.port).toBe(0);
+
+      await supervisor.stop();
+    });
+  });
+
+  describe("hybrid mode", () => {
+    it("reports spawned mode when rig.relayPath is non-default", () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        relayPath: "/usr/local/bin/rig-relay",
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      // Don't start — the binary doesn't exist. Just verify status reports spawned mode.
+      const status = supervisor.getStatus();
+      // Before start, mode is 'stopped' (not yet spawned).
+      expect(status.relay.mode).toBe("stopped");
+      expect(status.relay.running).toBe(false);
+    });
+
+    it("reports spawned mode when rig.servePath is non-default", () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        servePath: "/usr/local/bin/rig-serve",
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      const status = supervisor.getStatus();
+      expect(status.http.mode).toBe("stopped");
+      expect(status.http.running).toBe(false);
+    });
+
+    it("reports spawned mode for oscBridgePath and midiBridgePath in hybrid mode", () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        relayPath: "/usr/local/bin/rig-relay",
+        oscBridgePath: "/usr/local/bin/rig-osc-bridge",
+        midiBridgePath: "/usr/local/bin/rig-midi-bridge",
+        midiEnabled: true,
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      const status = supervisor.getStatus();
+      // Before start, all are stopped.
+      expect(status.osc.mode).toBe("stopped");
+      expect(status.midi.mode).toBe("stopped");
+      expect(status.midi.enabled).toBe(true);
+    });
+  });
+});

@@ -3,10 +3,11 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 
 export default {
-    input: 'src/frontend/main.ts',
+    input: 'src/runtime/main.ts',
     output: {
-        file: 'out/frontend/main.js',
+        file: 'out/runtime/main.js',
         format: 'es',
+        sourcemap: true,
     },
     plugins: [
         typescript({
@@ -14,9 +15,15 @@ export default {
             compilerOptions: {
                 module: 'ES2022',
                 moduleResolution: 'bundler',
+                declaration: false,
+                rootDir: '..',
             },
         }),
-        nodeResolve({ browser: true, preferBuiltins: false }),
-        commonjs()
-    ]
+        nodeResolve({
+            browser: true,
+            preferBuiltins: false,
+            extensions: ['.ts', '.js', '.mjs'],
+        }),
+        commonjs(),
+    ],
 };
