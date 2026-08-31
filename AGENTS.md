@@ -51,7 +51,8 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 ### Layer 3 — Renderer (`src/runtime/`)
 
 - `src/runtime/index.html` — served runtime page
-- `src/runtime/main.ts` — mounts `<hydra-element>`, connects to relay, routes wire commands
+- `src/runtime/main.ts` — mounts `<hydra-element>`, connects via `@jdomizz/rig-host`'s `createRigHost`
+- `src/runtime/adapter.ts` — `createHydraEngine(el)` bridges `<hydra-element>` to rig-host's `HostEngine` seam
 
 ### Type definitions (`src/types/`)
 
@@ -73,6 +74,7 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 
 | Package | Role |
 |---|---|
+| `@jdomizz/rig-host` | Renderer-side conformance kit (file ref to `../rig/packages/rig-host`) |
 | `@jdomizz/rig-transport` | Wire protocol (file ref to `../rig/packages/rig-transport`) |
 | `hydra-element` | Runtime custom element (file ref to `../hydra-element`) |
 | `ws` | WebSocket server for in-process relay |
@@ -93,7 +95,7 @@ The legacy webview (`src/frontend/`) was deleted in M4 closure. `hydra-synth` re
 
 ## Testing
 
-**vitest** — 86 tests across 8 spec files:
+**vitest** — 113 tests across 10 spec files:
 
 | File | Tests | Covers |
 |---|---|---|
@@ -105,6 +107,8 @@ The legacy webview (`src/frontend/`) was deleted in M4 closure. `hydra-synth` re
 | `src/rig/supervisor.spec.ts` | 10 | RigProcessSupervisor (in-process + hybrid) |
 | `src/capture/pipeline.spec.ts` | 15 | CapturePipeline (image, recording, timeout) |
 | `src/status/index.spec.ts` | 15 | StatusPanel (state, tooltip, feedback) |
+| `src/runtime-bundle.spec.ts` | 5 | Runtime bundle output verification |
+| `src/runtime/runtime-conformance.spec.ts` | 22 | Runtime conformance (adapter hooks + rig-host wire protocol) |
 
 **Playwright** is the planned test runner for the runtime page (Phase 2 / Phase 3 work — served page mounts `<hydra-element>`, dispatches `hydra-ready`, round-trips `rig.eval`).
 
