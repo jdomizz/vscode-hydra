@@ -50,23 +50,13 @@
         "icon": "$(circle-large-filled)"
       },
       {
-        "command": "hydra.startOscBridge",
-        "title": "Start OSC Bridge",
+        "command": "vscode-hydra.openRuntime",
+        "title": "Open runtime in browser",
         "category": "Hydra"
       },
       {
-        "command": "hydra.stopOscBridge",
-        "title": "Stop OSC Bridge",
-        "category": "Hydra"
-      },
-      {
-        "command": "hydra.startHttpServer",
-        "title": "Start HTTP Server",
-        "category": "Hydra"
-      },
-      {
-        "command": "hydra.stopHttpServer",
-        "title": "Stop HTTP Server",
+        "command": "vscode-hydra.panic",
+        "title": "Panic — silence all outputs",
         "category": "Hydra"
       }
     ],
@@ -114,66 +104,139 @@
           "command": "vscode-hydra.evalDocument",
           "group": "navigation",
           "when": "resourceLangId == javascript"
+        },
+        {
+          "command": "vscode-hydra.captureImage",
+          "group": "navigation",
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'rendering'"
+        },
+        {
+          "command": "vscode-hydra.startRecorder",
+          "group": "navigation",
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'rendering'"
+        },
+        {
+          "command": "vscode-hydra.stopRecorder",
+          "group": "navigation",
+          "when": "resourceLangId == javascript && vscode-hydra.status == 'recording'"
         }
       ]
     },
     "configuration": {
       "title": "Hydra",
       "properties": {
-        "hydra.connectToSweep": {
+        "rig.instrument": {
+          "type": "string",
+          "default": "sweep",
+          "enum": ["sweep", "cycles"],
+          "description": "Instrument (sweep or future cycles)"
+        },
+        "rig.target": {
+          "type": "string",
+          "default": "default",
+          "enum": ["sweep", "hydra", "default"],
+          "description": "Runtime profile → ?context= URL param"
+        },
+        "rig.relayPort": {
+          "type": "number",
+          "default": 9163,
+          "description": "WebSocket relay port"
+        },
+        "rig.httpPort": {
+          "type": "number",
+          "default": 8080,
+          "description": "HTTP server port (serves runtime page + workspace assets)"
+        },
+        "rig.udpIn": {
+          "type": "number",
+          "default": 9000,
+          "description": "OSC UDP in port"
+        },
+        "rig.udpOut": {
+          "type": "number",
+          "default": 9001,
+          "description": "OSC UDP out port"
+        },
+        "rig.midiEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Connect to Sweep PWA for full-featured live coding (MIDI, cameras, output window)"
+          "description": "Enable MIDI bridge"
         },
-        "hydra.sweepCliPath": {
+        "rig.sweepCliPath": {
           "type": "string",
           "default": "sweepctl",
           "description": "Path to sweepctl executable"
         },
+        "rig.oscBridgePath": {
+          "type": "string",
+          "default": "sweep-osc-bridge",
+          "description": "Path to OSC bridge binary"
+        },
+        "rig.midiBridgePath": {
+          "type": "string",
+          "default": "sweep-midi-bridge",
+          "description": "Path to MIDI bridge binary"
+        },
+        "rig.httpServerPath": {
+          "type": "string",
+          "default": "sweep-http",
+          "description": "Path to HTTP server binary"
+        },
+        "rig.relayPath": {
+          "type": "string",
+          "default": "rig-relay",
+          "description": "Path to external relay binary (hybrid mode)"
+        },
+        "rig.servePath": {
+          "type": "string",
+          "default": "rig-serve",
+          "description": "Path to external serve binary (hybrid mode)"
+        },
+        "rig.loadScripts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "JavaScript URLs to load on runtime ready (extensions, libraries)"
+        },
+        "rig.capturePort": {
+          "type": "number",
+          "default": 8081,
+          "description": "HTTP port for capture blob receiver (PNG/WebM upload from runtime)"
+        },
+        "rig.captureTimeoutMs": {
+          "type": "number",
+          "default": 30000,
+          "description": "Timeout in ms for capture blob HTTP POST"
+        },
+        "hydra.sweepCliPath": {
+          "type": "string",
+          "default": "sweepctl",
+          "description": "(Legacy fallback for rig.sweepCliPath)"
+        },
         "hydra.syncPort": {
           "type": "number",
           "default": 9163,
-          "description": "Port for sweep-sync WebSocket server"
-        },
-        "hydra.canvasUrl": {
-          "type": "string",
-          "default": "http://localhost:4173/canvas.html",
-          "description": "URL of Sweep canvas.html entry point"
+          "description": "(Legacy fallback for rig.relayPort)"
         },
         "hydra.oscBridgePath": {
           "type": "string",
           "default": "sweep-osc-bridge",
-          "description": "Path to sweep-osc-bridge executable"
+          "description": "(Legacy fallback for rig.oscBridgePath)"
         },
         "hydra.oscUdpPort": {
           "type": "number",
           "default": 9000,
-          "description": "UDP port for OSC bridge"
+          "description": "(Legacy fallback for rig.udpIn)"
         },
         "hydra.httpServerPath": {
           "type": "string",
           "default": "sweep-http",
-          "description": "Path to sweep-http executable"
+          "description": "(Legacy fallback for rig.httpServerPath)"
         },
         "hydra.httpPort": {
           "type": "number",
           "default": 8080,
-          "description": "Port for HTTP server"
-        },
-        "hydra.httpRoot": {
-          "type": "string",
-          "default": "",
-          "description": "Root directory for HTTP server (empty = workspace folder)"
-        },
-        "hydra.autoStartOscBridge": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically start OSC bridge on activation"
-        },
-        "hydra.autoStartHttpServer": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically start HTTP server on activation"
+          "description": "(Legacy fallback for rig.httpPort)"
         }
       }
     }
