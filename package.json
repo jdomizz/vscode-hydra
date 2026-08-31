@@ -58,6 +58,26 @@
         "command": "vscode-hydra.panic",
         "title": "Panic — silence all outputs",
         "category": "Hydra"
+      },
+      {
+        "command": "hydra.startOscBridge",
+        "title": "[deprecated] Start OSC bridge — use rig.* instead",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.stopOscBridge",
+        "title": "[deprecated] Stop OSC bridge — use rig.* instead",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.startHttpServer",
+        "title": "[deprecated] Start HTTP server — use rig.* instead",
+        "category": "Hydra"
+      },
+      {
+        "command": "hydra.stopHttpServer",
+        "title": "[deprecated] Stop HTTP server — use rig.* instead",
+        "category": "Hydra"
       }
     ],
     "keybindings": [
@@ -136,6 +156,12 @@
           "default": "default",
           "enum": ["sweep", "hydra", "default"],
           "description": "Runtime profile → ?context= URL param"
+        },
+        "rig.renderer": {
+          "type": "string",
+          "default": "external",
+          "enum": ["external", "webview"],
+          "description": "Renderer surface. `external` opens the served runtime page in your browser (only surface with camera/audio/MIDI). `webview` is reserved for future contained mounts; v1.0 falls back to `external` with an info message."
         },
         "rig.relayPort": {
           "type": "number",

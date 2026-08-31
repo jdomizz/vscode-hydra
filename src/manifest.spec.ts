@@ -171,22 +171,26 @@ describe('manifest parity', () => {
 
     // ── C4 — README parity ─────────────────────────────────────────────
 
-    it('C4: every rig.*/hydra.* mention in README is a declared setting', () => {
+    it('C4: every rig.* mention in README is a declared setting', () => {
         const properties = manifest.contributes.configuration.properties;
-        // Match `rig.X` or `hydra.X` only when not part of a larger namespace
-        // (e.g. `jdomizz.vscode-hydra.width` should not match `hydra.width`).
-        // The `(?:^|[^\w-])` lookbehind requires the match to start at a word
+        // Only `rig.*` mentions must be declared settings. The `hydra.*` namespace
+        // is the legacy 0.3.x schema and intentionally contains commands
+        // (`hydra.startOscBridge`), deprecation aliases, and backwards-compat
+        // fallbacks — those are validated by C5 (commands) and P2.1 (resolver).
+        // Match `rig.X` only when not part of a larger namespace (e.g.
+        // `jdomizz.vscode-hydra.width` should not match `rig.width` if such
+        // a key ever existed). The `(?:^|[^\w-])` lookbehind ensures a word
         // boundary not preceded by a hyphen or word char.
-        const mentionPattern = /(?:^|[^\w-])(rig|hydra)\.([a-zA-Z][a-zA-Z0-9]*)\b/g;
+        const mentionPattern = /(?:^|[^\w-])rig\.([a-zA-Z][a-zA-Z0-9]*)\b/g;
         const mentions = new Set<string>();
 
         let match: RegExpExecArray | null;
         while ((match = mentionPattern.exec(readme)) !== null) {
-            const full = `${match[1]}.${match[2]}`;
-            const matchIndex = match.index + match[0].indexOf(match[1]);
+            const settingKey = `rig.${match[1]}`;
+            const matchIndex = match.index + match[0].indexOf('rig.');
             const lineStart = readme.lastIndexOf('\n', matchIndex) + 1;
             const before = readme.slice(lineStart, matchIndex);
-            const after = readme.slice(matchIndex + match[0].length - (match[0].length - (match.index + match[0].length - matchIndex)), matchIndex + 20);
+            const after = readme.slice(matchIndex + match[0].length, matchIndex + 20);
             // Skip if preceded by :// (URL scheme) on this line.
             if (before.includes('://') || before.endsWith('/')) {
                 continue;
@@ -195,7 +199,7 @@ describe('manifest parity', () => {
             if (/^\.\w{2,4}(?:\s|$|[)'"`])/.test(after)) {
                 continue;
             }
-            mentions.add(full);
+            mentions.add(settingKey);
         }
 
         for (const mention of mentions) {
@@ -204,6 +208,7 @@ describe('manifest parity', () => {
                 `README mentions "${mention}" but it is not declared in contributes.configuration`,
             ).toHaveProperty(mention);
         }
+        expect(mentions.size).toBeGreaterThan(0);
     });
 
     // ── C5 — Deprecated aliases ────────────────────────────────────────

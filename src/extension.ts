@@ -11,6 +11,60 @@ import { BlobReceiver } from './capture/transport.js';
 import open from 'open';
 
 /**
+ * Deprecated alias commands — preserved as informational no-ops so users
+ * upgrading from 0.3.x don't hit "command not found" errors. Per
+ * m4-release-safety.md §P2.3.
+ */
+const DEPRECATED_ALIASES: ReadonlyArray<{ name: string; message: string }> = [
+    { name: 'startOscBridge', message: 'the OSC bridge starts automatically' },
+    { name: 'stopOscBridge', message: 'the OSC bridge is managed by the rig supervisor' },
+    { name: 'startHttpServer', message: 'the HTTP server starts automatically' },
+    { name: 'stopHttpServer', message: 'the HTTP server is managed by the rig supervisor' },
+];
+
+/** Current major version — increment to re-trigger what's-new notification on upgrade. */
+const WHATS_NEW_VERSION = '1.0';
+
+/**
+ * Show a one-time info message if the user has any 0.3.x settings
+ * (`jdomizz.vscode-hydra.*`) that v1.0 silently consumes / ignores.
+ * Uses globalState to fire only once per session.
+ */
+function notifyMigrationIfNeeded(context: vscode.ExtensionContext): void {
+    const legacy = vscode.workspace.getConfiguration('jdomizz.vscode-hydra')
+    const knownKeys = ['width', 'height', 'loadScripts']
+    const hasLegacy = knownKeys.some((key) => {
+        const inspected = legacy.inspect(key)
+        return inspected?.workspaceValue !== undefined || inspected?.globalValue !== undefined
+    })
+    if (!hasLegacy) return
+
+    const sessionKey = 'vscode-hydra.migrationNoticeShown'
+    if (context.globalState.get<boolean>(sessionKey)) return
+    void context.globalState.update(sessionKey, true)
+
+    vscode.window.showInformationMessage(
+        'vscode-hydra v1.0 detected legacy settings (`jdomizz.vscode-hydra.*`). `loadScripts` is honored as `rig.loadScripts`; `width` / `height` are silently ignored. See README → Upgrading from 0.3.x for the full migration map.',
+        'OK',
+    )
+}
+
+/**
+ * Show a one-time "what's new in v1.0" notification the first time the
+ * extension activates at this major version. Per m4-release-safety.md §P3.2.
+ */
+function notifyWhatsNewIfFirstActivation(context: vscode.ExtensionContext): void {
+    const key = 'vscode-hydra.whatsNewShownVersion'
+    if (context.globalState.get<string>(key) === WHATS_NEW_VERSION) return
+    void context.globalState.update(key, WHATS_NEW_VERSION)
+
+    vscode.window.showInformationMessage(
+        `vscode-hydra ${WHATS_NEW_VERSION} shipped. Big changes: external browser runtime, single status panel, rig.* settings. See README → Upgrading from 0.3.x.`,
+        'OK',
+    )
+}
+
+/**
  * Extension activation — M3 v1.0 wiring.
  *
  * Activation sequence:
@@ -24,6 +78,10 @@ import open from 'open';
  * Deactivation reverses the order: wire → blobReceiver → supervisor.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    // One-time notifications (m4 §P2.1 migration + §P3.2 what's new).
+    notifyMigrationIfNeeded(context);
+    notifyWhatsNewIfFirstActivation(context);
+
     const settings = getRigSettings();
     const diagnostics = new DiagnosticsManager();
     const editor = new EditorService();
@@ -178,6 +236,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             vscode.window.showErrorMessage(`Recording failed: ${(err as Error).message}`);
         }
     }));
+
+    // Deprecated alias commands — preserved for muscle-memory from 0.3.x.
+    // The rig supervisor now starts these services automatically; these
+    // commands exist only to avoid "command not found" surprises. They
+    // will be removed in v1.1.
+    for (const alias of DEPRECATED_ALIASES) {
+        context.subscriptions.push(vscode.commands.registerCommand(`hydra.${alias.name}`, async () => {
+            vscode.window.showInformationMessage(
+                `hydra.${alias.name} moved to the rig supervisor — ${alias.message}. See README → → Upgrading from 0.3.x.`,
+                'OK',
+            );
+        }));
+    }
 
     // Open runtime in external browser — invoked by status bar click.
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.openRuntime', async () => {

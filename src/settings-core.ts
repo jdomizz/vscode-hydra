@@ -11,6 +11,7 @@
 export interface RigSettings {
   readonly instrument: 'sweep' | 'cycles';
   readonly target: 'sweep' | 'hydra' | 'default';
+  readonly renderer: 'external' | 'webview';
   readonly relayPort: number;
   readonly httpPort: number;
   readonly udpIn: number;
@@ -30,6 +31,7 @@ export interface RigSettings {
 export const DEFAULTS: RigSettings = {
   instrument: 'sweep',
   target: 'default',
+  renderer: 'external',
   relayPort: 9163,
   httpPort: 8080,
   udpIn: 9000,
@@ -56,6 +58,7 @@ const KEY_MAP: ReadonlyArray<{
 }> = [
   { rigKey: 'instrument', hydraKey: null },
   { rigKey: 'target', hydraKey: null },
+  { rigKey: 'renderer', hydraKey: null },
   { rigKey: 'relayPort', hydraKey: 'syncPort' },
   { rigKey: 'httpPort', hydraKey: 'httpPort' },
   { rigKey: 'udpIn', hydraKey: 'oscUdpPort' },
@@ -73,15 +76,30 @@ const KEY_MAP: ReadonlyArray<{
 ];
 
 /**
- * Pure resolver: given a set of explicitly-set rig values and hydra values,
- * produce a fully-resolved RigSettings.
+ * Legacy 0.3.x namespace mapping — `jdomizz.vscode-hydra.*` keys that
+ * ship in older installs and need to be honored as fallbacks for
+ * v1.0's `rig.*` settings. Per m4-release-safety.md §Settings migration map.
  *
- * "Explicitly set" means the user wrote the key in settings.json (global or
- * workspace scope). Values absent from both maps fall through to DEFAULTS.
+ * Add a row here when the README "Upgrading" section documents a
+ * 0.3.x key. Keys NOT listed here are silently ignored (e.g. width/height).
+ */
+const LEGACY_KEY_MAP: ReadonlyArray<{
+  rigKey: keyof RigSettings;
+  legacyKey: string;
+}> = [
+  { rigKey: 'loadScripts', legacyKey: 'loadScripts' },
+];
+
+/**
+ * Pure resolver: given a set of explicitly-set rig values, hydra values,
+ * and legacy 0.3.x values, produce a fully-resolved RigSettings.
+ *
+ * Precedence: rig > hydra > legacy > defaults.
  */
 export function resolveSettings(
   rigSet: Readonly<Record<string, unknown>>,
   hydraSet: Readonly<Record<string, unknown>>,
+  legacySet: Readonly<Record<string, unknown>> = {},
 ): RigSettings {
   const result: Record<string, unknown> = {};
 
@@ -91,11 +109,16 @@ export function resolveSettings(
     } else if (hydraKey !== null && hydraKey in hydraSet) {
       result[rigKey] = hydraSet[hydraKey];
     } else {
-      result[rigKey] = DEFAULTS[rigKey];
+      const legacy = LEGACY_KEY_MAP.find((m) => m.rigKey === rigKey);
+      if (legacy && legacy.legacyKey in legacySet) {
+        result[rigKey] = legacySet[legacy.legacyKey];
+      } else {
+        result[rigKey] = DEFAULTS[rigKey];
+      }
     }
   }
 
   return result as unknown as RigSettings;
 }
 
-export { KEY_MAP };
+export { KEY_MAP, LEGACY_KEY_MAP };

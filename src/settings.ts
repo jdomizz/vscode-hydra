@@ -32,25 +32,41 @@ function collectExplicit(
 export function getRigSettings(): RigSettings {
   const rig = vscode.workspace.getConfiguration('rig');
   const hydra = vscode.workspace.getConfiguration('hydra');
+  const legacy = vscode.workspace.getConfiguration('jdomizz.vscode-hydra');
 
   const rigKeys = KEY_MAP.map(m => m.rigKey);
   const hydraKeys = KEY_MAP.map(m => m.hydraKey).filter((k): k is string => k !== null);
 
   const rigSet = collectExplicit(rig, rigKeys);
   const hydraSet = collectExplicit(hydra, hydraKeys);
+  // Only `loadScripts` is honored from the 0.3.x namespace; other keys
+  // (width/height) are silently ignored per the migration map.
+  const legacySet: Record<string, unknown> = {};
+  if ('loadScripts' in legacy) {
+    const inspected = legacy.inspect('loadScripts');
+    if (inspected?.workspaceValue !== undefined) {
+      legacySet['loadScripts'] = inspected.workspaceValue;
+    } else if (inspected?.globalValue !== undefined) {
+      legacySet['loadScripts'] = inspected.globalValue;
+    }
+  }
 
-  return resolveSettings(rigSet, hydraSet);
+  return resolveSettings(rigSet, hydraSet, legacySet);
 }
 
 /**
- * Subscribe to changes on either rig.* or hydra.* namespaces.
+ * Subscribe to changes on rig.*, hydra.*, or jdomizz.vscode-hydra.* namespaces.
  * Re-resolves settings and invokes handler on any change.
  */
 export function onSettingsChanged(
   handler: (s: RigSettings) => void,
 ): vscode.Disposable {
   const d1 = vscode.workspace.onDidChangeConfiguration(e => {
-    if (e.affectsConfiguration('rig') || e.affectsConfiguration('hydra')) {
+    if (
+      e.affectsConfiguration('rig') ||
+      e.affectsConfiguration('hydra') ||
+      e.affectsConfiguration('jdomizz.vscode-hydra')
+    ) {
       handler(getRigSettings());
     }
   });
