@@ -9,6 +9,14 @@ describe("resolveSettings", () => {
     assert.deepStrictEqual(result, DEFAULTS);
   });
 
+  it("default renderer is `webview` (dual-mount-renderer.md §D-DM2)", () => {
+    // The shipped v1.0 flipped the renderer default from `external` to
+    // `webview` so existing v0.3.x users get the integrated panel back
+    // without opt-in. Lock this — flipping it back is a breaking change
+    // and should require a spec update.
+    assert.equal(DEFAULTS.renderer, "webview");
+  });
+
   it("rig.* value wins over hydra.* value", () => {
     const rigSet = { relayPort: 7777 };
     const hydraSet = { syncPort: 5555 };

@@ -190,6 +190,61 @@ interface StatusBarState {
 
 const statusBarState: StatusBarState = { items: [] };
 
+// ── Webview stubs (dual-mount-renderer) ──────────────────────────────
+
+export enum ViewColumn {
+  One = 1,
+  Two = 2,
+  Three = 3,
+  Beside = -2,
+  Active = -1,
+}
+
+export interface Webview {
+  html: string;
+}
+
+export interface WebviewPanel {
+  readonly webview: Webview;
+  readonly viewType: string;
+  readonly title: string;
+  readonly viewColumn: ViewColumn | undefined;
+  reveal: (column?: ViewColumn) => void;
+  dispose: () => void;
+  onDidDispose: (handler: () => void) => { dispose: () => void };
+}
+
+interface WebviewPanelState {
+  viewType: string;
+  title: string;
+  viewColumn: ViewColumn | undefined;
+  options: Record<string, unknown>;
+  html: string;
+  disposeHandler: (() => void) | null;
+}
+
+interface WebviewPanelsState {
+  panels: WebviewPanelState[];
+  createCount: number;
+}
+
+const webviewPanelsState: WebviewPanelsState = {
+  panels: [],
+  createCount: 0,
+};
+
+/**
+ * Captured webview panel states for tests.
+ * Reset via {@link __resetMockState}.
+ */
+export function __getMockedWebviewPanels(): readonly WebviewPanelState[] {
+  return webviewPanelsState.panels;
+}
+
+export function __getWebviewCreateCount(): number {
+  return webviewPanelsState.createCount;
+}
+
 /** Captured information messages for manifest-parity tests (C5 deprecated aliases). */
 export const __mockedInfoMessages: string[] = [];
 
@@ -221,6 +276,49 @@ export const window = {
     };
     statusBarState.items.push(item);
     return item;
+  },
+  createWebviewPanel(
+    viewType: string,
+    title: string,
+    viewColumn: ViewColumn | undefined,
+    options?: Record<string, unknown>,
+  ): WebviewPanel {
+    webviewPanelsState.createCount++;
+    const state: WebviewPanelState = {
+      viewType,
+      title,
+      viewColumn,
+      options: options ?? {},
+      html: "",
+      disposeHandler: null,
+    };
+    const panel: WebviewPanel = {
+      webview: {
+        get html(): string {
+          return state.html;
+        },
+        set html(value: string) {
+          state.html = value;
+        },
+      },
+      viewType: state.viewType,
+      title: state.title,
+      viewColumn: state.viewColumn,
+      reveal: (_column?: ViewColumn) => {
+        /* noop — tests don't render */
+      },
+      dispose: () => {
+        const idx = webviewPanelsState.panels.indexOf(state);
+        if (idx >= 0) webviewPanelsState.panels.splice(idx, 1);
+        if (state.disposeHandler) state.disposeHandler();
+      },
+      onDidDispose: (handler: () => void) => {
+        state.disposeHandler = handler;
+        return { dispose: () => { state.disposeHandler = null; } };
+      },
+    };
+    webviewPanelsState.panels.push(state);
+    return panel;
   },
   showInformationMessage: (msg: string) => {
     __mockedInfoMessages.push(msg);
@@ -305,6 +403,8 @@ export interface DiagnosticCollection {
 
 export const env = {
   openExternal: async (_uri: Uri): Promise<boolean> => true,
+  /** Passthrough — tests run in a local (non-remote) context. */
+  asExternalUri: async (uri: Uri): Promise<Uri> => uri,
 };
 
 /**
@@ -329,6 +429,8 @@ export function __resetMockState(): void {
   __mockedInfoMessages.length = 0;
   __mockedErrorMessages.length = 0;
   statusBarState.items.length = 0;
+  webviewPanelsState.panels.length = 0;
+  webviewPanelsState.createCount = 0;
 }
 
 export const commands = {

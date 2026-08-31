@@ -142,6 +142,13 @@ describe("manifest parity", () => {
     }
   });
 
+  it("C2: rig.renderer default is `webview` (dual-mount-renderer.md §D-DM2)", () => {
+    // The shipped v1.0 default. Lock this — flipping back to `external`
+    // is a breaking change and should require a spec update.
+    const properties = manifest.contributes.configuration.properties;
+    expect(properties["rig.renderer"]?.default).toBe("webview");
+  });
+
   // ── C3 — Context keys parity ───────────────────────────────────────
 
   it("C3: every context key in when clauses is set by production code", () => {

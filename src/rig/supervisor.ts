@@ -5,6 +5,17 @@ import { DEFAULTS } from "../settings.js";
 import { RelayServer } from "@jdomizz/rig-relay";
 import { createHttpServer } from "@jdomizz/rig-serve";
 
+export interface SupervisorOptions {
+  /**
+   * Root directory the HTTP server serves. The runtime page is expected
+   * at `<serveRoot>/runtime/index.html`. Defaults to `process.cwd()`;
+   * the extension passes `<extensionPath>/out` (the extension host's cwd
+   * is NOT the workspace folder, and `out/runtime/` is where the bundle
+   * lives).
+   */
+  serveRoot?: string;
+}
+
 /**
  * Composite process supervisor for rig services (relay, serve, osc-bridge, midi-bridge).
  *
@@ -22,15 +33,17 @@ import { createHttpServer } from "@jdomizz/rig-serve";
  */
 export class RigProcessSupervisor extends EventEmitter {
   #settings: RigSettings;
+  #serveRoot: string;
   #relay?: InProcessRelay | SpawnedProcess;
   #serve?: InProcessServe | SpawnedProcess;
   #oscBridge?: SpawnedProcess;
   #midiBridge?: SpawnedProcess;
   #disposed = false;
 
-  constructor(settings: RigSettings) {
+  constructor(settings: RigSettings, options: SupervisorOptions = {}) {
     super();
     this.#settings = settings;
+    this.#serveRoot = options.serveRoot ?? process.cwd();
   }
 
   /**
@@ -50,17 +63,21 @@ export class RigProcessSupervisor extends EventEmitter {
     // Start HTTP server.
     const serveInProcess = this.#settings.servePath === DEFAULTS.servePath;
     if (serveInProcess) {
-      const serve = new InProcessServe({
-        port: this.#settings.httpPort,
-        root: process.cwd(),
-      });
-      await serve.start();
+      const serve = await this.#withAddrInUseFallback(
+        this.#settings.httpPort,
+        "HTTP server",
+        async (port) => {
+          const s = new InProcessServe({ port, root: this.#serveRoot });
+          await s.start();
+          return s;
+        },
+      );
       this.#serve = serve;
     } else {
       const serve = new SpawnedProcess({
         name: "rig-serve",
         command: this.#settings.servePath,
-        args: ["--port", String(this.#settings.httpPort), "--root", process.cwd()],
+        args: ["--port", String(this.#settings.httpPort), "--root", this.#serveRoot],
         readyPattern: /serving/i,
         url: `http://127.0.0.1:${this.#settings.httpPort}`,
       });
@@ -72,8 +89,15 @@ export class RigProcessSupervisor extends EventEmitter {
     // Start relay.
     const relayInProcess = this.#settings.relayPath === DEFAULTS.relayPath;
     if (relayInProcess) {
-      const relay = new InProcessRelay({ port: this.#settings.relayPort });
-      await relay.start();
+      const relay = await this.#withAddrInUseFallback(
+        this.#settings.relayPort,
+        "WebSocket relay",
+        async (port) => {
+          const r = new InProcessRelay({ port });
+          await r.start();
+          return r;
+        },
+      );
       this.#relay = relay;
     } else {
       const relay = new SpawnedProcess({
@@ -214,6 +238,32 @@ export class RigProcessSupervisor extends EventEmitter {
     }
     this.emit("exit", { service, code });
     // Auto-restart logic is handled by SpawnedProcess internally.
+  }
+
+  /**
+   * Start an in-process service on the configured port; on `EADDRINUSE`
+   * (typically a second vscode-hydra window — F5 sessions on the same
+   * workspace), fall back to an OS-assigned port (0) so both windows work
+   * concurrently. The service's `url` reports the actually-bound port, so
+   * the wire, runtime URL and tunnels all follow automatically.
+   */
+  async #withAddrInUseFallback<T>(
+    port: number,
+    label: string,
+    start: (port: number) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await start(port);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException)?.code !== "EADDRINUSE") {
+        throw err;
+      }
+      this.emit(
+        "log",
+        `${label}: port ${port} is already in use (another vscode-hydra window?) — using an OS-assigned port`,
+      );
+      return start(0);
+    }
   }
 }
 

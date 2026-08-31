@@ -1,12 +1,34 @@
 // See https://go.microsoft.com/fwlink/?LinkId=733558
-// for the documentation about the tasks.json format
+// for the documentation on the tasks.json format
+//
+// The watch task uses an INLINE problem matcher (no `$esbuild-watch` —
+// that name requires the connor4312.esbuild-problem-matchers extension,
+// and without it installed the F5 preLaunchTask never completes).
+// The background patterns match the `[esbuild] build started/finished`
+// lines printed by the watchLogPlugin in esbuild.mjs — keep them in sync.
 {
 	"version": "2.0.0",
 	"tasks": [
 		{
 			"type": "npm",
 			"script": "watch",
-			"problemMatcher": "$tsc-watch",
+			"label": "npm: watch",
+			"problemMatcher": {
+				"owner": "esbuild",
+				"pattern": {
+					"regexp": "^\\s*(.*?)\\((\\d+),(\\d+)\\):\\s+(error|warning):\\s+(.*)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5
+				},
+				"background": {
+					"activeOnStart": false,
+					"beginsPattern": "^\\[esbuild\\] build started",
+					"endsPattern": "^\\[esbuild\\] build finished"
+				}
+			},
 			"isBackground": true,
 			"presentation": {
 				"reveal": "never"

@@ -8,7 +8,7 @@ import { flashEditorForEval, errorRange } from "./decorations.js";
 import { StatusPanel } from "./status/index.js";
 import { RigWire, RigProcessSupervisor } from "./rig/index.js";
 import { CapturePipeline } from "./capture/pipeline.js";
-import open from "open";
+import { RuntimeWebviewPanel } from "./webview/panel.js";
 
 /**
  * Deprecated alias commands — preserved as informational no-ops so users
@@ -65,6 +65,49 @@ function notifyWhatsNewIfFirstActivation(context: vscode.ExtensionContext): void
 }
 
 /**
+ * Module-level flag for the one-time webview renderer notice. Fires once
+ * per activation (resets on window reload). The flag lives at module scope
+ * (not in globalState) so users who toggle `rig.renderer` see the message
+ * again on a new window — but not again on every activation in the same
+ * window. Per dual-mount-renderer.md §D-DM5.
+ */
+let webviewNoticeShown = false;
+
+/**
+ * Show a one-time info notification when the webview renderer is active,
+ * explaining that camera/audio/MIDI are not available inside VS Code
+ * webviews. Per dual-mount-renderer.md §D-DM5.
+ */
+function notifyWebviewLimitationIfActive(settings: { renderer: "external" | "webview" }): void {
+  if (settings.renderer !== "webview" || webviewNoticeShown) return;
+  webviewNoticeShown = true;
+  vscode.window.showInformationMessage(
+    "Webview renderer active. Camera, audio, and MIDI are not available in VS Code webviews. Set `rig.renderer` to `external` in settings for full device access.",
+    "OK",
+  );
+}
+
+/**
+ * Resolve a server URL to one reachable from the user's browser.
+ *
+ * `vscode.env.asExternalUri` establishes a port-forwarding tunnel in remote
+ * workspaces (SSH/WSL/web) and returns a client-side URL; it is a no-op when
+ * the extension runs locally. It only supports http(s) — for the relay's
+ * `ws://` URL we tunnel an http probe with the same authority and scheme-swap
+ * the result (tunnels are raw TCP, so WebSocket traffic flows through them).
+ * Without this, remote users hit ERR_CONNECTION_REFUSED: the browser would
+ * try the remote machine's 127.0.0.1 on the local machine.
+ */
+async function resolveExternalUrl(url: string): Promise<string> {
+  const uri = vscode.Uri.parse(url);
+  if (uri.scheme === "http" || uri.scheme === "https") {
+    return (await vscode.env.asExternalUri(uri)).toString();
+  }
+  const probed = await vscode.env.asExternalUri(uri.with({ scheme: "http" }));
+  return probed.with({ scheme: probed.scheme === "https" ? "wss" : "ws" }).toString();
+}
+
+/**
  * Extension activation — M3 v1.0 wiring.
  *
  * Activation sequence:
@@ -82,6 +125,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   notifyWhatsNewIfFirstActivation(context);
 
   const settings = getRigSettings();
+
+  // Webview renderer notice — fires once per activation when webview is
+  // the active renderer. Per dual-mount-renderer.md §D-DM5.
+  notifyWebviewLimitationIfActive(settings);
+
+  // Webview mount for the runtime page. Created on demand by wire.onReady
+  // and the openRuntime command. Disposed via context.subscriptions.
+  const webviewPanel = new RuntimeWebviewPanel();
+  context.subscriptions.push(webviewPanel);
+
   const diagnostics = new DiagnosticsManager();
   const editor = new EditorService();
   const status = new StatusPanel();
@@ -89,7 +142,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Start the rig process supervisor (relay + HTTP server).
   // In-process by default; hybrid mode when rig.*Path settings point to
   // external binaries. Resolves when both relay and HTTP server are listening.
-  const supervisor = new RigProcessSupervisor(settings);
+  // The HTTP server serves the extension's `out/` dir — this is where the
+  // runtime bundle (out/runtime/index.html) lives, and it is independent
+  // of the extension host's cwd (which is NOT the workspace folder).
+  const supervisor = new RigProcessSupervisor(settings, {
+    serveRoot: path.join(context.extensionPath, "out"),
+  });
   let relayUrl: string;
   let httpUrl: string;
   try {
@@ -108,6 +166,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return;
   }
 
+  // Actually-bound ports (differ from settings when the configured port was
+  // busy and the supervisor fell back to an OS-assigned port — e.g. a second
+  // vscode-hydra window on the same workspace).
+  const relayPort = Number(new URL(relayUrl).port) || settings.relayPort;
+  const httpPort = Number(new URL(httpUrl).port) || settings.httpPort;
+
   // Set initial status context key so keybindings/menus resolve correctly.
   await vscode.commands.executeCommand("setContext", "vscode-hydra.status", "rendering");
 
@@ -118,26 +182,52 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Status panel subscribes to wire feedback for panic/recording state.
   context.subscriptions.push(status.subscribe(wire));
 
-  // Current runtime URL — updated when the wire connects, read by openRuntime command.
+  // Current runtime URL — resolved client-side (tunneled in remote
+  // workspaces), updated when the wire connects, read by openRuntime command.
   let currentRuntimeUrl: string | null = null;
 
-  // Wire ready (WebSocket open) → open the runtime page in external browser.
-  // The `open` call is gated on non-test env so `npm test`'s mock-activations
-  // do not spawn browser tabs. The status bar click (`vscode-hydra.openRuntime`,
-  // below) still uses `vscode.env.openExternal`, which is VS Code's native
-  // path and is unaffected by the `open` package.
-  const openBrowser = process.env.VITEST ? () => {} : open;
+  // Build the runtime page URL with client-reachable (tunneled) endpoints.
+  // Re-resolved on every call — tunnels can be closed by the user, so the
+  // resolved URL must not be cached long-term (per asExternalUri contract).
+  const runtimePageUrl = async (): Promise<string> => {
+    const relay = await resolveExternalUrl(relayUrl);
+    const page = await resolveExternalUrl(`${httpUrl}/runtime/index.html`);
+    return `${page}?relay=${encodeURIComponent(relay)}&context=hydra`;
+  };
+
+  // Wire ready (WebSocket open) → mount the runtime page in the renderer
+  // surface selected by `rig.renderer`. `webview` opens an integrated
+  // VS Code panel (default); `external` opens the system browser via
+  // `vscode.env.openExternal`. The URL is resolved with `asExternalUri`
+  // first so it works in remote workspaces (SSH/WSL/web). Per
+  // dual-mount-renderer.md §D-DM1 / §D-DM6.
   wire.onReady(() => {
-    currentRuntimeUrl = `${httpUrl}/runtime/index.html?relay=${encodeURIComponent(relayUrl)}&context=hydra`;
-    status.update({
-      running: true,
-      relay: { port: settings.relayPort, connected: true },
-      http: { port: settings.httpPort, running: true },
-      panic: false,
-      recording: false,
-      runtimeUrl: currentRuntimeUrl,
-    });
-    openBrowser(currentRuntimeUrl);
+    void runtimePageUrl()
+      .then((url) => {
+        currentRuntimeUrl = url;
+        status.update({
+          running: true,
+          relay: { port: relayPort, connected: true },
+          http: { port: httpPort, running: true },
+          panic: false,
+          recording: false,
+          runtimeUrl: url,
+        });
+        if (!process.env.VITEST) {
+          // Re-read settings so a mid-session toggle (D-DM7: documented as
+          // "restart window to switch renderers" but harmless to honor if
+          // it does happen) picks the new renderer.
+          const s = getRigSettings();
+          if (s.renderer === "webview") {
+            webviewPanel.create(url);
+          } else {
+            void vscode.env.openExternal(vscode.Uri.parse(url));
+          }
+        }
+      })
+      .catch((err: Error) => {
+        vscode.window.showErrorMessage(`Failed to resolve runtime URL: ${err.message}`);
+      });
   });
 
   // Wire feedback → update status for state changes.
@@ -145,8 +235,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (fb.type === "state" || fb.type === "state:update") {
       status.update({
         running: true,
-        relay: { port: settings.relayPort, connected: true },
-        http: { port: settings.httpPort, running: true },
+        relay: { port: relayPort, connected: true },
+        http: { port: httpPort, running: true },
         panic: false,
         recording: false,
       });
@@ -265,12 +355,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
   }
 
-  // Open runtime in external browser — invoked by status bar click.
+  // Open runtime in the configured renderer surface — invoked by status
+  // bar click. `webview` reveals the existing panel (or creates it on
+  // first click); `external` opens the system browser. Per
+  // dual-mount-renderer.md §D-DM6.
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-hydra.openRuntime", async () => {
-      if (currentRuntimeUrl) {
-        await vscode.env.openExternal(vscode.Uri.parse(currentRuntimeUrl));
-      } else {
+      try {
+        const url = await runtimePageUrl();
+        currentRuntimeUrl = url;
+        const s = getRigSettings();
+        if (s.renderer === "webview") {
+          webviewPanel.create(url);
+        } else {
+          await vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+      } catch {
         vscode.window.showWarningMessage("Runtime is not ready yet");
       }
     }),

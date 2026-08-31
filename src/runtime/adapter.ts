@@ -16,6 +16,7 @@
  * See runtime-r-comformance spec §D4 for the full HostEngine mapping table.
  */
 import type { HostEngine } from "@jdomizz/rig-host";
+import { Capture, downloadBlob, filenameWithStamp } from "@jdomizz/rig-capture";
 
 /**
  * Create a {@link HostEngine} backed by a `<hydra-element>` instance.
@@ -36,10 +37,10 @@ export function createHydraEngine(
   const getSynth = (): Record<string, unknown> | null =>
     (el.synth as Record<string, unknown> | null) ?? null;
 
-  // Recording state. MediaRecorder is created on `startCapture` and torn
-  // down on `stopCapture`; chunks accumulate via `ondataavailable`.
-  let recorder: MediaRecorder | null = null;
-  let chunks: Blob[] = [];
+  // Capture lifecycle via the shared rig-capture core (single canvas, so
+  // the target label is unused). Replaces the hand-rolled MediaRecorder
+  // here with sweep's battle-tested MIME-fallback + bitrate implementation.
+  const capture = new Capture(() => el.canvas);
 
   return {
     state() {
@@ -88,57 +89,23 @@ export function createHydraEngine(
     async captureImage(): Promise<void> {
       const synth = getSynth();
       (synth?.screencap as (() => void) | undefined)?.();
-      const canvas = el.canvas;
-      if (!canvas) {
+      if (!el.canvas) {
         throw new Error("canvas not available");
       }
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))));
-      });
-      downloadBlob(blob, filename("png"));
+      const blob = await capture.snapshot();
+      downloadBlob(blob, filenameWithStamp("hydra-capture", "png"));
     },
 
     startCapture() {
-      const canvas = el.canvas;
-      if (!canvas || recorder) {
-        return;
-      }
-      try {
-        const stream = canvas.captureStream(25);
-        recorder = new MediaRecorder(stream, {
-          mimeType: "video/webm;codecs=vp9",
-        });
-        chunks = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
-          }
-        };
-        recorder.start(100);
-      } catch {
-        // rig-host now wraps engine.startCapture in try/catch and emits
-        // error feedback; the throw is re-thrown so that path activates.
-        recorder = null;
-        chunks = [];
-        throw new Error("MediaRecorder start failed");
-      }
+      capture.startRecording();
     },
 
     async stopCapture(): Promise<void> {
-      if (!recorder) {
+      if (!capture.recording) {
         return;
       }
-      const currentRecorder = recorder;
-      recorder = null;
-      // Wait for the recorder's `onstop` event so the final
-      // `ondataavailable` chunks land in `chunks` before we concat.
-      await new Promise<void>((resolve) => {
-        currentRecorder.addEventListener("stop", () => resolve(), { once: true });
-        currentRecorder.stop();
-      });
-      const blob = new Blob(chunks, { type: "video/webm" });
-      chunks = [];
-      downloadBlob(blob, filename("webm"));
+      const blob = await capture.stopRecording();
+      downloadBlob(blob, filenameWithStamp("hydra-capture", "webm"));
     },
 
     getFps(): number {
@@ -147,27 +114,4 @@ export function createHydraEngine(
       return stats?.fps ?? 0;
     },
   };
-}
-
-/**
- * Trigger a browser download by creating an Object URL, an invisible
- * anchor element with a `download` attribute, and a synthetic click.
- * Revokes the URL on next tick to release the blob memory.
- */
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  // Revoke on next tick so the browser has time to start the download.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function filename(ext: "png" | "webm"): string {
-  const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  return ext === "png" ? `hydra-capture-${ts}.${ext}` : `hydra-recording-${ts}.${ext}`;
 }

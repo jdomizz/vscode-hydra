@@ -29,7 +29,7 @@ export interface RigSettings {
 export const DEFAULTS: RigSettings = {
   instrument: "sweep",
   target: "default",
-  renderer: "external",
+  renderer: "webview",
   relayPort: 9163,
   httpPort: 8080,
   udpIn: 9000,

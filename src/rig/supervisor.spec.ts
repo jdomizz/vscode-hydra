@@ -73,6 +73,33 @@ describe("RigProcessSupervisor", () => {
       await supervisor.stop();
     });
 
+    it("falls back to an OS-assigned port when the configured ports are busy (second window)", async () => {
+      // First supervisor holds the configured ports (simulates another
+      // vscode-hydra window on the same workspace).
+      const settings = makeSettings({ relayPort: 17391, httpPort: 17392 });
+      const first = new RigProcessSupervisor(settings);
+      supervisors.push(first);
+      const firstUrls = await first.start();
+      expect(firstUrls.relayUrl).toBe("ws://127.0.0.1:17391");
+      expect(firstUrls.httpUrl).toBe("http://127.0.0.1:17392");
+
+      // Second supervisor on the same ports: EADDRINUSE → port-0 fallback.
+      const logs: string[] = [];
+      const second = new RigProcessSupervisor(settings);
+      supervisors.push(second);
+      second.on("log", (msg: string) => logs.push(msg));
+      const secondUrls = await second.start();
+
+      expect(secondUrls.relayUrl).not.toBe(firstUrls.relayUrl);
+      expect(secondUrls.httpUrl).not.toBe(firstUrls.httpUrl);
+      expect(secondUrls.relayUrl).toMatch(/^ws:\/\/127\.0\.0\.1:\d+$/);
+      expect(secondUrls.httpUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(logs.length).toBe(2); // one fallback notice per service
+
+      await first.stop();
+      await second.stop();
+    });
+
     it("reports all four services accurately in in-process mode", async () => {
       const settings = makeSettings({
         relayPort: 0,

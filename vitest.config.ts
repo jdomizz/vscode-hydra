@@ -5,7 +5,6 @@ export default defineConfig({
     resolve: {
         alias: {
             vscode: path.resolve(__dirname, 'src/__mocks__/vscode.ts'),
-            open: path.resolve(__dirname, 'src/__mocks__/open.ts'),
         },
     },
     test: {

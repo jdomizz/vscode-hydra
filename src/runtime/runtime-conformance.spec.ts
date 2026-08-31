@@ -57,8 +57,11 @@ if (typeof (globalThis as { document?: unknown }).document === "undefined") {
       set download(_: string) {},
       style: {} as Record<string, string>,
       click: vi.fn(),
+      remove: vi.fn(),
     })),
     body: {
+      append: vi.fn(),
+      remove: vi.fn(),
       appendChild: vi.fn(),
       removeChild: vi.fn(),
     },

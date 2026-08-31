@@ -153,20 +153,30 @@
         "rig.instrument": {
           "type": "string",
           "default": "sweep",
-          "enum": ["sweep", "cycles"],
+          "enum": [
+            "sweep",
+            "cycles"
+          ],
           "description": "Instrument (sweep or future cycles)"
         },
         "rig.target": {
           "type": "string",
           "default": "default",
-          "enum": ["sweep", "hydra", "default"],
+          "enum": [
+            "sweep",
+            "hydra",
+            "default"
+          ],
           "description": "Runtime profile → ?context= URL param"
         },
         "rig.renderer": {
           "type": "string",
-          "default": "external",
-          "enum": ["external", "webview"],
-          "description": "Renderer surface. `external` opens the served runtime page in your browser (only surface with camera/audio/MIDI). `webview` is reserved for future contained mounts; v1.0 falls back to `external` with an info message."
+          "default": "webview",
+          "enum": [
+            "webview",
+            "external"
+          ],
+          "description": "Renderer surface. `webview` (default) shows an integrated panel next to the editor — camera/audio/MIDI are not available there. `external` opens the served runtime page in your browser (the only surface with full device access). See README → Renderer surfaces."
         },
         "rig.relayPort": {
           "type": "number",
@@ -225,7 +235,9 @@
         },
         "rig.loadScripts": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "JavaScript URLs to load on runtime ready (extensions, libraries)"
         },
@@ -263,10 +275,10 @@
     }
   },
   "scripts": {
-    "compile": "npm run compile:backend && npm run compile:runtime",
-    "compile:backend": "tsc",
+    "compile": "node esbuild.mjs --production && npm run compile:runtime",
+    "compile:dev": "node esbuild.mjs && npm run compile:runtime",
     "compile:runtime": "node -e \"require('node:fs').mkdirSync('out/runtime',{recursive:true});require('node:fs').copyFileSync('src/runtime/index.html','out/runtime/index.html')\" && rollup -c",
-    "watch": "tsc -watch",
+    "watch": "node esbuild.mjs --watch",
     "lint": "eslint 'src/**/*.ts'",
     "test": "vitest run",
     "test:osc": "node demo/osc-node.js",
@@ -274,12 +286,12 @@
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
+    "@jdomizz/rig-capture": "file:../rig/packages/rig-capture",
     "@jdomizz/rig-host": "file:../rig/packages/rig-host",
     "@jdomizz/rig-relay": "file:../rig/packages/rig-relay",
     "@jdomizz/rig-serve": "file:../rig/packages/rig-serve",
     "@jdomizz/rig-transport": "file:../rig/packages/rig-transport",
     "hydra-element": "file:../hydra-element",
-    "open": "^10.0.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -293,6 +305,7 @@
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.28.2",
     "eslint": "^8.57.0",
     "node-osc": "^9.1.1",
     "osc-js": "^2.4.1",

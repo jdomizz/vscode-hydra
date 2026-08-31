@@ -2,9 +2,8 @@
  * Vitest global setup — runs once before any test file.
  *
  * Rebuilds the runtime bundle via `npm run compile:runtime` so the
- * bundle-existence tests in src/runtime-bundle.spec.ts pass even when
- * a prior `npm run compile:backend` (tsc) clobbered the rollup output
- * with raw TypeScript compilation (both write to `out/runtime/main.js`).
+ * bundle-existence tests in src/runtime-bundle.spec.ts pass even on a
+ * fresh checkout where `out/runtime/` has never been built.
  *
  * Skipped if SKIP_RUNTIME_REBUILD=1 (e.g. when running a single file with
  * `vitest run src/foo.spec.ts` and you don't want to pay the rebuild cost).
