@@ -1,28 +1,28 @@
-import { describe, it } from 'node:test';
-import * as assert from 'node:assert/strict';
-import { resolveSettings, DEFAULTS } from './settings-core.js';
-import type { RigSettings } from './settings-core.js';
+import { describe, it } from "node:test";
+import * as assert from "node:assert/strict";
+import { resolveSettings, DEFAULTS } from "./settings-core.js";
+import type { RigSettings } from "./settings-core.js";
 
-describe('resolveSettings', () => {
-  it('returns defaults when no settings are set', () => {
+describe("resolveSettings", () => {
+  it("returns defaults when no settings are set", () => {
     const result = resolveSettings({}, {});
     assert.deepStrictEqual(result, DEFAULTS);
   });
 
-  it('rig.* value wins over hydra.* value', () => {
+  it("rig.* value wins over hydra.* value", () => {
     const rigSet = { relayPort: 7777 };
     const hydraSet = { syncPort: 5555 };
     const result = resolveSettings(rigSet, hydraSet);
     assert.equal(result.relayPort, 7777);
   });
 
-  it('hydra.* fallback works when rig.* is absent', () => {
+  it("hydra.* fallback works when rig.* is absent", () => {
     const hydraSet = { syncPort: 5555 };
     const result = resolveSettings({}, hydraSet);
     assert.equal(result.relayPort, 5555);
   });
 
-  it('explicit rig.* default still wins over hydra.* non-default', () => {
+  it("explicit rig.* default still wins over hydra.* non-default", () => {
     // User explicitly set rig.relayPort = 9163 (the default), and
     // hydra.syncPort = 5555. The rig namespace should win because the
     // user explicitly chose it.
@@ -32,30 +32,29 @@ describe('resolveSettings', () => {
     assert.equal(result.relayPort, 9163);
   });
 
-  it('resolves all mapped keys correctly', () => {
+  it("resolves all mapped keys correctly", () => {
     const rigSet = {
-      instrument: 'cycles',
-      target: 'sweep',
+      instrument: "cycles",
+      target: "sweep",
+      renderer: "webview",
       relayPort: 1111,
       httpPort: 2222,
       udpIn: 3333,
       udpOut: 4444,
       midiEnabled: true,
-      sweepCliPath: '/a',
-      oscBridgePath: '/b',
-      midiBridgePath: '/c',
-      httpServerPath: '/d',
-      relayPath: '/e',
-      servePath: '/f',
-      loadScripts: ['https://example.com/ext.js'],
-      capturePort: 9090,
-      captureTimeoutMs: 15000,
+      sweepCliPath: "/a",
+      oscBridgePath: "/b",
+      midiBridgePath: "/c",
+      httpServerPath: "/d",
+      relayPath: "/e",
+      servePath: "/f",
+      loadScripts: ["https://example.com/ext.js"],
     };
     const result = resolveSettings(rigSet, {});
     assert.deepStrictEqual(result, rigSet as unknown as RigSettings);
   });
 
-  it('hydra fallback uses correct key mapping', () => {
+  it("hydra fallback uses correct key mapping", () => {
     // hydra.syncPort → rig.relayPort
     // hydra.httpPort → rig.httpPort
     // hydra.oscUdpPort → rig.udpIn
@@ -66,23 +65,23 @@ describe('resolveSettings', () => {
       syncPort: 1000,
       httpPort: 2000,
       oscUdpPort: 3000,
-      sweepCliPath: '/x',
-      oscBridgePath: '/y',
-      httpServerPath: '/z',
+      sweepCliPath: "/x",
+      oscBridgePath: "/y",
+      httpServerPath: "/z",
     };
     const result = resolveSettings({}, hydraSet);
     assert.equal(result.relayPort, 1000);
     assert.equal(result.httpPort, 2000);
     assert.equal(result.udpIn, 3000);
-    assert.equal(result.sweepCliPath, '/x');
-    assert.equal(result.oscBridgePath, '/y');
-    assert.equal(result.httpServerPath, '/z');
+    assert.equal(result.sweepCliPath, "/x");
+    assert.equal(result.oscBridgePath, "/y");
+    assert.equal(result.httpServerPath, "/z");
     // Unmapped keys should still be defaults
     assert.equal(result.udpOut, DEFAULTS.udpOut);
     assert.equal(result.instrument, DEFAULTS.instrument);
   });
 
-  it('partial rig.* overrides only those keys, hydra fills the rest', () => {
+  it("partial rig.* overrides only those keys, hydra fills the rest", () => {
     const rigSet = { relayPort: 9999 };
     const hydraSet = { syncPort: 1111, httpPort: 2222 };
     const result = resolveSettings(rigSet, hydraSet);

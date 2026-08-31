@@ -43,7 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - `hydra-synth`, `p5` as direct dependencies (now transitive via `hydra-element`)
 - Legacy webview files: `src/frontend/{main,hydra,canvas,osc,recorder,p5}.ts`
-- 4 dead `hydra.*` commands: `startOscBridge`, `stopOscBridge`, `startHttpServer`, `stopHttpServer` (P2.3 may re-register these as informational aliases)
+- Inline `RelayServer` (32 LoC in `src/rig/relay-server.ts`) — replaced by `@jdomizz/rig-relay` package
+- Inline `InProcessServe` (~100 LoC) + `MIME_TYPES` / `getMimeType` / `setCorsHeaders` (~30 LoC) in `src/rig/supervisor.ts` — replaced by `@jdomizz/rig-serve`'s `createHttpServer`
+
+### Deprecated (preserved for 0.3.x muscle memory)
+- 4 `hydra.*` commands: `startOscBridge`, `stopOscBridge`, `startHttpServer`, `stopHttpServer` — informational no-ops; the rig supervisor starts these services automatically. To be deleted in `v1.1`.
 
 ### Migration
 - Existing `hydra.*` settings continue to work via fallback resolution

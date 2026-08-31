@@ -1,9 +1,9 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'events';
-import type { RigSettings } from '../settings.js';
-import { DEFAULTS } from '../settings.js';
-import { RelayServer } from '@jdomizz/rig-relay';
-import { createHttpServer } from '@jdomizz/rig-serve';
+import { spawn, type ChildProcess } from "node:child_process";
+import { EventEmitter } from "events";
+import type { RigSettings } from "../settings.js";
+import { DEFAULTS } from "../settings.js";
+import { RelayServer } from "@jdomizz/rig-relay";
+import { createHttpServer } from "@jdomizz/rig-serve";
 
 /**
  * Composite process supervisor for rig services (relay, serve, osc-bridge, midi-bridge).
@@ -44,7 +44,7 @@ export class RigProcessSupervisor extends EventEmitter {
    */
   async start(): Promise<{ relayUrl: string; httpUrl: string }> {
     if (this.#disposed) {
-      throw new Error('RigProcessSupervisor: cannot start after dispose');
+      throw new Error("RigProcessSupervisor: cannot start after dispose");
     }
 
     // Start HTTP server.
@@ -58,13 +58,13 @@ export class RigProcessSupervisor extends EventEmitter {
       this.#serve = serve;
     } else {
       const serve = new SpawnedProcess({
-        name: 'rig-serve',
+        name: "rig-serve",
         command: this.#settings.servePath,
-        args: ['--port', String(this.#settings.httpPort), '--root', process.cwd()],
+        args: ["--port", String(this.#settings.httpPort), "--root", process.cwd()],
         readyPattern: /serving/i,
         url: `http://127.0.0.1:${this.#settings.httpPort}`,
       });
-      serve.on('exit', (code) => this.#onSpawnedExit('serve', code));
+      serve.on("exit", (code) => this.#onSpawnedExit("serve", code));
       await serve.start();
       this.#serve = serve;
     }
@@ -77,13 +77,13 @@ export class RigProcessSupervisor extends EventEmitter {
       this.#relay = relay;
     } else {
       const relay = new SpawnedProcess({
-        name: 'rig-relay',
+        name: "rig-relay",
         command: this.#settings.relayPath,
-        args: ['--port', String(this.#settings.relayPort)],
+        args: ["--port", String(this.#settings.relayPort)],
         readyPattern: /listening/i,
         url: `ws://127.0.0.1:${this.#settings.relayPort}`,
       });
-      relay.on('exit', (code) => this.#onSpawnedExit('relay', code));
+      relay.on("exit", (code) => this.#onSpawnedExit("relay", code));
       await relay.start();
       this.#relay = relay;
     }
@@ -93,40 +93,40 @@ export class RigProcessSupervisor extends EventEmitter {
     const hybridMode = !serveInProcess || !relayInProcess;
     if (hybridMode) {
       const oscBridge = new SpawnedProcess({
-        name: 'rig-osc-bridge',
+        name: "rig-osc-bridge",
         command: this.#settings.oscBridgePath,
         args: [
-          '--udp-port',
+          "--udp-port",
           String(this.#settings.udpIn),
-          '--ws-url',
+          "--ws-url",
           `ws://127.0.0.1:${this.#settings.relayPort}`,
         ],
         readyPattern: /UDP/i,
         url: `udp://127.0.0.1:${this.#settings.udpIn}`,
       });
-      oscBridge.on('exit', (code) => this.#onSpawnedExit('osc', code));
+      oscBridge.on("exit", (code) => this.#onSpawnedExit("osc", code));
       try {
         await oscBridge.start();
         this.#oscBridge = oscBridge;
       } catch (err) {
-        this.emit('error', { service: 'osc', error: err });
+        this.emit("error", { service: "osc", error: err });
       }
 
       // Start MIDI bridge (spawned; native modules; only if enabled).
       if (this.#settings.midiEnabled) {
         const midiBridge = new SpawnedProcess({
-          name: 'rig-midi-bridge',
+          name: "rig-midi-bridge",
           command: this.#settings.midiBridgePath,
-          args: ['--ws-url', `ws://127.0.0.1:${this.#settings.relayPort}`],
+          args: ["--ws-url", `ws://127.0.0.1:${this.#settings.relayPort}`],
           readyPattern: /Listening on MIDI input/i,
-          url: 'midi://',
+          url: "midi://",
         });
-        midiBridge.on('exit', (code) => this.#onSpawnedExit('midi', code));
+        midiBridge.on("exit", (code) => this.#onSpawnedExit("midi", code));
         try {
           await midiBridge.start();
           this.#midiBridge = midiBridge;
         } catch (err) {
-          this.emit('error', { service: 'midi', error: err });
+          this.emit("error", { service: "midi", error: err });
         }
       }
     }
@@ -144,7 +144,7 @@ export class RigProcessSupervisor extends EventEmitter {
 
     if (this.#relay) {
       const relay = this.#relay;
-      if (relay.mode === 'in-process') {
+      if (relay.mode === "in-process") {
         tasks.push(relay.stop());
       } else {
         relay.stop();
@@ -153,7 +153,7 @@ export class RigProcessSupervisor extends EventEmitter {
     }
     if (this.#serve) {
       const serve = this.#serve;
-      if (serve.mode === 'in-process') {
+      if (serve.mode === "in-process") {
         tasks.push(serve.stop());
       } else {
         serve.stop();
@@ -174,10 +174,10 @@ export class RigProcessSupervisor extends EventEmitter {
 
   /** Composite status for the StatusPanel. */
   getStatus(): {
-    relay: { port: number; mode: 'in-process' | 'spawned' | 'stopped'; running: boolean };
-    http: { port: number; mode: 'in-process' | 'spawned' | 'stopped'; running: boolean };
-    osc: { port: number; mode: 'spawned' | 'stopped'; running: boolean };
-    midi: { enabled: boolean; mode: 'spawned' | 'stopped'; running: boolean };
+    relay: { port: number; mode: "in-process" | "spawned" | "stopped"; running: boolean };
+    http: { port: number; mode: "in-process" | "spawned" | "stopped"; running: boolean };
+    osc: { port: number; mode: "spawned" | "stopped"; running: boolean };
+    midi: { enabled: boolean; mode: "spawned" | "stopped"; running: boolean };
   } {
     const relayStatus = this.#relay
       ? {
@@ -185,7 +185,7 @@ export class RigProcessSupervisor extends EventEmitter {
           mode: this.#relay.mode,
           running: this.#relay.running,
         }
-      : { port: this.#settings.relayPort, mode: 'stopped' as const, running: false };
+      : { port: this.#settings.relayPort, mode: "stopped" as const, running: false };
 
     const httpStatus = this.#serve
       ? {
@@ -193,26 +193,26 @@ export class RigProcessSupervisor extends EventEmitter {
           mode: this.#serve.mode,
           running: this.#serve.running,
         }
-      : { port: this.#settings.httpPort, mode: 'stopped' as const, running: false };
+      : { port: this.#settings.httpPort, mode: "stopped" as const, running: false };
 
     const oscStatus = this.#oscBridge
-      ? { port: this.#settings.udpIn, mode: 'spawned' as const, running: this.#oscBridge.running }
-      : { port: this.#settings.udpIn, mode: 'stopped' as const, running: false };
+      ? { port: this.#settings.udpIn, mode: "spawned" as const, running: this.#oscBridge.running }
+      : { port: this.#settings.udpIn, mode: "stopped" as const, running: false };
 
     const midiStatus = {
       enabled: this.#settings.midiEnabled,
-      mode: (this.#midiBridge ? 'spawned' : 'stopped') as 'spawned' | 'stopped',
+      mode: (this.#midiBridge ? "spawned" : "stopped") as "spawned" | "stopped",
       running: this.#midiBridge?.running ?? false,
     };
 
     return { relay: relayStatus, http: httpStatus, osc: oscStatus, midi: midiStatus };
   }
 
-  #onSpawnedExit(service: 'relay' | 'serve' | 'osc' | 'midi', code: number | null): void {
+  #onSpawnedExit(service: "relay" | "serve" | "osc" | "midi", code: number | null): void {
     if (this.#disposed) {
       return;
     }
-    this.emit('exit', { service, code });
+    this.emit("exit", { service, code });
     // Auto-restart logic is handled by SpawnedProcess internally.
   }
 }
@@ -230,12 +230,12 @@ interface InProcessRelayOptions {
  * emits `listening`. No fixed sleeps.
  */
 class InProcessRelay {
-  readonly mode = 'in-process' as const;
+  readonly mode = "in-process" as const;
   #server: RelayServer;
   #running = false;
 
   constructor(options: InProcessRelayOptions) {
-    this.#server = new RelayServer({ port: options.port, host: '127.0.0.1' });
+    this.#server = new RelayServer({ port: options.port, host: "127.0.0.1" });
   }
 
   async start(): Promise<void> {
@@ -270,7 +270,7 @@ interface InProcessServeOptions {
  * Ready detection: resolves {@link start} once the HTTP server emits `listening`.
  */
 class InProcessServe {
-  readonly mode = 'in-process' as const;
+  readonly mode = "in-process" as const;
   #server: ReturnType<typeof createHttpServer>;
   #port: number;
   #running = false;
@@ -292,7 +292,7 @@ class InProcessServe {
 
   get url(): string {
     const addr = this.#server.server.address();
-    const port = addr && typeof addr === 'object' ? addr.port : this.#port;
+    const port = addr && typeof addr === "object" ? addr.port : this.#port;
     return `http://127.0.0.1:${port}`;
   }
 
@@ -323,7 +323,7 @@ interface SpawnedProcessOptions {
  *   successful ready.
  */
 class SpawnedProcess extends EventEmitter {
-  readonly mode = 'spawned' as const;
+  readonly mode = "spawned" as const;
   #options: SpawnedProcessOptions;
   #process: ChildProcess | null = null;
   #running = false;
@@ -349,7 +349,7 @@ class SpawnedProcess extends EventEmitter {
       this.#restartTimer = undefined;
     }
     if (this.#process) {
-      this.#process.kill('SIGTERM');
+      this.#process.kill("SIGTERM");
       this.#process = null;
     }
   }
@@ -365,14 +365,14 @@ class SpawnedProcess extends EventEmitter {
   async #spawn(): Promise<void> {
     return new Promise<void>((resolveReady, rejectReady) => {
       this.#process = spawn(this.#options.command, this.#options.args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       const onStdout = (data: Buffer): void => {
         const msg = data.toString();
         if (this.#options.readyPattern.test(msg)) {
-          this.#process?.stdout?.off('data', onStdout);
-          this.#process?.off('close', onClose);
+          this.#process?.stdout?.off("data", onStdout);
+          this.#process?.off("close", onClose);
           clearTimeout(timer);
           this.#running = true;
           this.#backoffMs = 1000; // Reset backoff on successful ready.
@@ -381,12 +381,12 @@ class SpawnedProcess extends EventEmitter {
       };
 
       const onClose = (code: number | null): void => {
-        this.#process?.stdout?.off('data', onStdout);
-        this.#process?.off('close', onClose);
+        this.#process?.stdout?.off("data", onStdout);
+        this.#process?.off("close", onClose);
         clearTimeout(timer);
         this.#process = null;
         this.#running = false;
-        this.emit('exit', code);
+        this.emit("exit", code);
         if (!this.#intentionalStop) {
           this.#scheduleRestart();
         }
@@ -394,18 +394,18 @@ class SpawnedProcess extends EventEmitter {
       };
 
       const timer = setTimeout(() => {
-        this.#process?.stdout?.off('data', onStdout);
-        this.#process?.off('close', onClose);
-        this.#process?.kill('SIGTERM');
+        this.#process?.stdout?.off("data", onStdout);
+        this.#process?.off("close", onClose);
+        this.#process?.kill("SIGTERM");
         this.#process = null;
         rejectReady(new Error(`${this.#options.name} ready timeout (5s)`));
       }, 5000);
 
-      this.#process.stdout?.on('data', onStdout);
-      this.#process.stderr?.on('data', (data) => {
-        this.emit('log', data.toString());
+      this.#process.stdout?.on("data", onStdout);
+      this.#process.stderr?.on("data", (data) => {
+        this.emit("log", data.toString());
       });
-      this.#process.once('close', onClose);
+      this.#process.once("close", onClose);
     });
   }
 

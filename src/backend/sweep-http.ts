@@ -1,5 +1,5 @@
-import { spawn, ChildProcess } from 'child_process';
-import { EventEmitter } from 'events';
+import { spawn, ChildProcess } from "child_process";
+import { EventEmitter } from "events";
 
 export interface HttpServerConfig {
   path: string;
@@ -18,62 +18,59 @@ export class SweepHttpServer extends EventEmitter {
 
   async start(): Promise<void> {
     if (this.process) {
-      throw new Error('HTTP server already running');
+      throw new Error("HTTP server already running");
     }
 
-    const args = [
-      '--port', this.config.port.toString(),
-      '--root', this.config.root
-    ];
+    const args = ["--port", this.config.port.toString(), "--root", this.config.root];
 
     this.process = spawn(this.config.path, args, {
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
-    this.process.stdout?.on('data', (data) => {
+    this.process.stdout?.on("data", (data) => {
       const message = data.toString().trim();
-      this.emit('log', message);
+      this.emit("log", message);
     });
 
-    this.process.stderr?.on('data', (data) => {
+    this.process.stderr?.on("data", (data) => {
       const message = data.toString().trim();
-      this.emit('error', message);
+      this.emit("error", message);
     });
 
-    this.process.on('close', (code) => {
+    this.process.on("close", (code) => {
       this.process = null;
-      this.emit('close', code);
+      this.emit("close", code);
     });
 
     // Wait for the process to signal readiness via stdout
     await new Promise<void>((resolve, reject) => {
       const onLog = (msg: string) => {
-        if (msg.includes('Serving')) {
-          this.off('log', onLog);
-          this.off('close', onClose);
+        if (msg.includes("Serving")) {
+          this.off("log", onLog);
+          this.off("close", onClose);
           clearTimeout(timer);
           resolve();
         }
       };
       const onClose = (code: number) => {
-        this.off('log', onLog);
+        this.off("log", onLog);
         clearTimeout(timer);
         reject(new Error(`HTTP server exited before ready (code ${code})`));
       };
       const timer = setTimeout(() => {
-        this.off('log', onLog);
-        this.off('close', onClose);
-        reject(new Error('HTTP server ready timeout (5s)'));
+        this.off("log", onLog);
+        this.off("close", onClose);
+        reject(new Error("HTTP server ready timeout (5s)"));
       }, 5000);
 
-      this.on('log', onLog);
-      this.once('close', onClose);
+      this.on("log", onLog);
+      this.once("close", onClose);
     });
   }
 
   stop(): void {
     if (this.process) {
-      this.process.kill('SIGTERM');
+      this.process.kill("SIGTERM");
       this.process = null;
     }
   }

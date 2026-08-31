@@ -224,16 +224,6 @@
           "default": [],
           "description": "JavaScript URLs to load on runtime ready (extensions, libraries)"
         },
-        "rig.capturePort": {
-          "type": "number",
-          "default": 8081,
-          "description": "HTTP port for capture blob receiver (PNG/WebM upload from runtime)"
-        },
-        "rig.captureTimeoutMs": {
-          "type": "number",
-          "default": 30000,
-          "description": "Timeout in ms for capture blob HTTP POST"
-        },
         "hydra.sweepCliPath": {
           "type": "string",
           "default": "sweepctl",

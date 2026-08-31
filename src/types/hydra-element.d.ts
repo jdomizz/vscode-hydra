@@ -38,15 +38,15 @@ interface HydraElementConstructor {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'hydra-element': HydraElement;
+    "hydra-element": HydraElement;
   }
 }
 
-declare module 'hydra-element' {
+declare module "hydra-element" {
   export const HydraElement: HydraElementConstructor;
 }
 
-declare module 'hydra-element/eval' {
+declare module "hydra-element/eval" {
   /**
    * Evaluate code using a hydra-synth instance as scope.
    * NOT a sandbox — user code has full access to browser globals.

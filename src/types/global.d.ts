@@ -31,12 +31,20 @@ declare global {
    * (see src/lib/easing-functions.js).
    */
   type EaseName =
-    | 'linear'
-    | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad'
-    | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic'
-    | 'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart'
-    | 'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint'
-    | 'sin';
+    | "linear"
+    | "easeInQuad"
+    | "easeOutQuad"
+    | "easeInOutQuad"
+    | "easeInCubic"
+    | "easeOutCubic"
+    | "easeInOutCubic"
+    | "easeInQuart"
+    | "easeOutQuart"
+    | "easeInOutQuart"
+    | "easeInQuint"
+    | "easeOutQuint"
+    | "easeInOutQuint"
+    | "sin";
 
   // ── Output (the o0-o3 render targets) ─────────────────────────
   /** A render target. The globals `o0`-`o3` hold the four default instances. */
@@ -44,7 +52,7 @@ declare global {
     /** The regl instance. */
     regl: any;
     /** Shader precision for this output ('lowp' | 'mediump' | 'highp'). */
-    precision: 'lowp' | 'mediump' | 'highp';
+    precision: "lowp" | "mediump" | "highp";
     /** Name of this output, e.g. `'o0'`. */
     label: string;
     /** Index of this output, assigned by the renderer. */
@@ -249,7 +257,13 @@ declare global {
      * @param offsetX - zoom pivot x, 0.5 = center (default 0.5)
      * @param offsetY - zoom pivot y, 0.5 = center (default 0.5)
      */
-    scale(amount?: Param, xMult?: Param, yMult?: Param, offsetX?: Param, offsetY?: Param): GlslSource;
+    scale(
+      amount?: Param,
+      xMult?: Param,
+      yMult?: Param,
+      offsetX?: Param,
+      offsetY?: Param,
+    ): GlslSource;
     /**
      * Scroll the image.
      * @param scrollX - horizontal offset (default 0.5)
@@ -346,7 +360,13 @@ declare global {
      * @param offsetX - offset strength horizontally (default 0.5)
      * @param offsetY - offset strength vertically (default 0.5)
      */
-    modulateRepeat(texture: SourceInput, repeatX?: Param, repeatY?: Param, offsetX?: Param, offsetY?: Param): GlslSource;
+    modulateRepeat(
+      texture: SourceInput,
+      repeatX?: Param,
+      repeatY?: Param,
+      offsetX?: Param,
+      offsetY?: Param,
+    ): GlslSource;
     /**
      * Tile `reps` times horizontally, offset driven by `texture`.
      * @param texture - source driving the offset
@@ -424,7 +444,7 @@ declare global {
      */
     init(
       opts: { src?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement; dynamic?: boolean },
-      params?: Record<string, any>
+      params?: Record<string, any>,
     ): void;
     /**
      * Initialize from the webcam.
@@ -797,12 +817,14 @@ declare global {
    * WebM canvas recorder (created when `enableStreamCapture` is true).
    * `start()` begins recording, `stop()` downloads the `.webm`.
    */
-  var vidRecorder: {
-    /** Start recording the canvas stream. */
-    start(): void;
-    /** Stop recording and download the result as a `.webm` file. */
-    stop(): void;
-  } | undefined;
+  var vidRecorder:
+    | {
+        /** Start recording the canvas stream. */
+        start(): void;
+        /** Stop recording and download the result as a `.webm` file. */
+        stop(): void;
+      }
+    | undefined;
   /**
    * Register a custom transform/generator at runtime. The object must match
    * the `{ name, type, inputs, glsl }` shape of glsl-functions.js.

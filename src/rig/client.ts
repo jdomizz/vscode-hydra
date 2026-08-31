@@ -1,8 +1,4 @@
-import {
-  TransportClient,
-  type RigCommand,
-  type RigFeedback,
-} from '@jdomizz/rig-transport';
+import { TransportClient, type RigCommand, type RigFeedback } from "@jdomizz/rig-transport";
 
 /**
  * Result of an `eval:code` round-trip. `ok` is false when the runtime
@@ -51,10 +47,10 @@ export class RigWire {
    */
   async eval(code: string): Promise<EvalResult> {
     const client = this.#requireClient();
-    const cmd: RigCommand = { type: 'eval:code', code };
+    const cmd: RigCommand = { type: "eval:code", code };
     try {
       const fb = await client.sendCommand(cmd);
-      if (fb.type === 'error') {
+      if (fb.type === "error") {
         return { ok: false, feedback: fb };
       }
       return { ok: true, feedback: fb };
@@ -67,9 +63,22 @@ export class RigWire {
   sendCommand(cmd: RigCommand): Promise<RigFeedback> {
     const client = this.#client;
     if (!client) {
-      return Promise.reject(new Error('RigWire: not connected (call connect() first)'));
+      return Promise.reject(new Error("RigWire: not connected (call connect() first)"));
     }
     return client.sendCommand(cmd);
+  }
+
+  /**
+   * Fire-and-forget send. Used for commands with no wire feedback
+   * (e.g. `capture:image` — the runtime downloads the blob locally;
+   * there is no success feedback type in the wire protocol).
+   */
+  send(cmd: RigCommand): void {
+    const client = this.#client;
+    if (!client) {
+      throw new Error("RigWire: not connected (call connect() first)");
+    }
+    client.sendFireAndForget(cmd);
   }
 
   /** Register a handler for push events (feedback without an id). */
@@ -95,7 +104,7 @@ export class RigWire {
 
   #requireClient(): TransportClient<RigCommand, RigFeedback> {
     if (!this.#client) {
-      throw new Error('RigWire: not connected (call connect() first)');
+      throw new Error("RigWire: not connected (call connect() first)");
     }
     return this.#client;
   }

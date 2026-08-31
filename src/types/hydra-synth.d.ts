@@ -4,7 +4,7 @@
 // declarations in global.d.ts (single source of truth for the DSL).
 
 /** Shader floating-point precision ('mediump' by default, 'highp' on iOS). */
-export type Precision = 'lowp' | 'mediump' | 'highp';
+export type Precision = "lowp" | "mediump" | "highp";
 
 /**
  * Options for the HydraRenderer constructor. All optional; defaults shown.
@@ -323,7 +323,12 @@ interface GeneratorFactory {
    * `{ name: 'myFx', type: 'color', inputs: [{ name: 'amount', type: 'float', default: 1 }], glsl: 'return _c0 * amount;' }`.
    * @param obj - the transform/generator definition (see glsl-functions.js)
    */
-  setFunction(obj: { name: string; type: string; inputs: Array<{ name: string; type: string; default: any }>; glsl: string }): void;
+  setFunction(obj: {
+    name: string;
+    type: string;
+    inputs: Array<{ name: string; type: string; default: any }>;
+    glsl: string;
+  }): void;
 }
 
 /**
