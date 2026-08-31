@@ -189,9 +189,9 @@ export interface Synth {
  * audio analyzer and synth context.
  *
  * ```js
- * import Hydra from 'hydra-synth'
+ * // library mode: use hydra.synth.*
  * const hydra = new Hydra({ width: 1280, height: 720 })
- * hydra.synth.osc(20).out()   // library mode: use hydra.synth.*
+ * hydra.synth.osc(20).out()
  * ```
  */
 export default class HydraRenderer {

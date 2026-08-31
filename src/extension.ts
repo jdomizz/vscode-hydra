@@ -16,9 +16,8 @@ import open from 'open';
  * subscribes to wire feedback for transient state (panic, recording).
  *
  * The runtime page (external browser) is served by rig-serve; the extension
- * opens it when the wire connects. The legacy webview (HydraPanel) is not
- * activated — it's kept as a contained quick-preview per the plugin spec
- * but is not the default render surface.
+ * opens it when the wire connects. The served runtime page is the sole
+ * render surface.
  */
 export function activate(context: vscode.ExtensionContext): void {
     const settings = getRigSettings();

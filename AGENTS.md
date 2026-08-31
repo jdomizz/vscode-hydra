@@ -2,9 +2,8 @@
 
 ## Commands
 
-- `npm run compile` — compile backend (tsc) + frontend (rollup) to `out/`
+- `npm run compile` — compile backend (tsc) to `out/`
 - `npm run compile:backend` — compile TypeScript backend only (`tsc`)
-- `npm run compile:frontend` — bundle frontend only (`rollup -c`)
 - `npm run watch` — watch backend TypeScript changes (`tsc -watch`)
 - `npm run lint` — lint `src/` with ESLint
 - `npm test` — run unit tests (`vitest run` — 86 tests across 8 files)
@@ -26,8 +25,7 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 │    rig-relay in-process (spawned in hybrid mode)            │
 ├─────────────────────────────────────────────────────────────┤
 │ 3. RENDERER                                                 │
-│    external browser runtime (primary) ← rig-serve           │
-│    webview quick-preview (fallback, no devices)             │
+│    external browser runtime ← rig-serve                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -55,10 +53,6 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 - `src/runtime/index.html` — served runtime page
 - `src/runtime/main.ts` — mounts `<hydra-element>`, connects to relay, routes wire commands
 
-### Legacy webview (`src/frontend/`)
-
-- `src/frontend/main.ts`, `hydra.ts`, `canvas.ts`, `osc.ts`, `recorder.ts`, `p5.ts` — legacy webview quick-preview. Still uses `hydra-synth` directly (this is the legacy path; D5 only applies to `src/runtime/`).
-
 ### Type definitions (`src/types/`)
 
 - `src/types/hydra-synth.d.ts` — hydra-synth DSL types (from feat/types branch)
@@ -70,7 +64,6 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 
 - TypeScript strict mode everywhere; `@typescript-eslint`
 - Backend: compiled by `tsc` to `out/`
-- Frontend (webview): bundled with Rollup to `out/frontend/main.js`
 - Runtime: bundled with Rollup; served by `rig-serve`
 - ESLint config in `.eslintrc.json` — warns on style issues, no errors
 - `demo/` is a playground with examples — not part of the extension
@@ -82,23 +75,21 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 |---|---|
 | `@jdomizz/rig-transport` | Wire protocol (file ref to `../rig/packages/rig-transport`) |
 | `hydra-element` | Runtime custom element (file ref to `../hydra-element`) |
-| `hydra-synth` | **Legacy webview only** — transitive dep of `hydra-element`; direct import only in `src/frontend/` |
 | `ws` | WebSocket server for in-process relay |
 | `open` | Open runtime URL in external browser |
-| `p5` | p5.js wrapper (legacy webview) |
 
-`osc-js` was moved to `devDependencies` in Phase 0 (legacy OSC stack removed from runtime).
+`osc-js` is in `devDependencies` (used by `demo/osc-node.js`).
 
-### D5 invariant — no `hydra-synth` in `src/runtime/`
+### D5 invariant — no `hydra-synth` direct imports in `src/`
 
-The runtime frontend (`src/runtime/`) must **never** import `hydra-synth` directly. It uses `<hydra-element>` exclusively. This is a hard invariant:
+No file in `src/` may import `hydra-synth` directly. The codebase uses `<hydra-element>` exclusively. This is a hard invariant:
 
 ```bash
 # Must return NOTHING (exit code 1):
-git grep "from 'hydra-synth'" src/runtime/
+git grep "from 'hydra-synth'" src/
 ```
 
-The legacy webview (`src/frontend/`) still imports `hydra-synth` directly — that is the legacy path and will be removed when the webview is migrated to `<hydra-element>`.
+The legacy webview (`src/frontend/`) was deleted in M4 closure. `hydra-synth` remains a transitive dependency of `hydra-element`; the served runtime page is the sole render surface.
 
 ## Testing
 
