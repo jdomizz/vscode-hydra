@@ -173,20 +173,21 @@ describe('manifest parity', () => {
 
     it('C4: every rig.*/hydra.* mention in README is a declared setting', () => {
         const properties = manifest.contributes.configuration.properties;
-        // Match rig.* or hydra.* setting mentions.
-        // Exclude URLs (e.g. https://hydra.ojack.xyz/) and file paths (e.g. /image/hydra.jpg)
-        // by checking the surrounding context.
-        const mentionPattern = /\b(rig|hydra)\.([a-zA-Z][a-zA-Z0-9]*)\b/g;
+        // Match `rig.X` or `hydra.X` only when not part of a larger namespace
+        // (e.g. `jdomizz.vscode-hydra.width` should not match `hydra.width`).
+        // The `(?:^|[^\w-])` lookbehind requires the match to start at a word
+        // boundary not preceded by a hyphen or word char.
+        const mentionPattern = /(?:^|[^\w-])(rig|hydra)\.([a-zA-Z][a-zA-Z0-9]*)\b/g;
         const mentions = new Set<string>();
 
         let match: RegExpExecArray | null;
         while ((match = mentionPattern.exec(readme)) !== null) {
             const full = `${match[1]}.${match[2]}`;
-            // Check surrounding context for URL/file-path indicators.
-            const lineStart = readme.lastIndexOf('\n', match.index) + 1;
-            const before = readme.slice(lineStart, match.index);
-            const after = readme.slice(match.index + match[0].length, match.index + match[0].length + 20);
-            // Skip if preceded by :// (URL scheme) or / (file path segment).
+            const matchIndex = match.index + match[0].indexOf(match[1]);
+            const lineStart = readme.lastIndexOf('\n', matchIndex) + 1;
+            const before = readme.slice(lineStart, matchIndex);
+            const after = readme.slice(matchIndex + match[0].length - (match[0].length - (match.index + match[0].length - matchIndex)), matchIndex + 20);
+            // Skip if preceded by :// (URL scheme) on this line.
             if (before.includes('://') || before.endsWith('/')) {
                 continue;
             }

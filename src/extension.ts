@@ -73,6 +73,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     let currentRuntimeUrl: string | null = null;
 
     // Wire ready (WebSocket open) → open the runtime page in external browser.
+    // The `open` call is gated on non-test env so `npm test`'s mock-activations
+    // do not spawn browser tabs. The status bar click (`vscode-hydra.openRuntime`,
+    // below) still uses `vscode.env.openExternal`, which is VS Code's native
+    // path and is unaffected by the `open` package.
+    const openBrowser = process.env.VITEST ? () => {} : open;
     wire.onReady(() => {
         currentRuntimeUrl = `${httpUrl}/runtime/index.html?relay=${encodeURIComponent(relayUrl)}&context=hydra&capturePort=${settings.capturePort}`;
         status.update({
@@ -83,7 +88,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             recording: false,
             runtimeUrl: currentRuntimeUrl,
         });
-        void open(currentRuntimeUrl);
+        openBrowser(currentRuntimeUrl)
     });
 
     // Wire feedback → update status for state changes.
