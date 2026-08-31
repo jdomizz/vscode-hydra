@@ -6,7 +6,7 @@
 - `npm run compile:backend` — compile TypeScript backend only (`tsc`)
 - `npm run watch` — watch backend TypeScript changes (`tsc -watch`)
 - `npm run lint` — lint `src/` with ESLint
-- `npm test` — run unit tests (`vitest run` — 86 tests across 8 files)
+- `npm test` — run unit tests (`vitest run` — 124 tests across 11 files)
 - `npm run package` — package as VSIX (`vsce package`)
 - `npm run test:osc` — run demo OSC node (`node demo/osc-node.js`)
 
@@ -95,20 +95,21 @@ The legacy webview (`src/frontend/`) was deleted in M4 closure. `hydra-synth` re
 
 ## Testing
 
-**vitest** — 113 tests across 10 spec files:
+**vitest** — 124 tests across 11 spec files:
 
 | File | Tests | Covers |
 |---|---|---|
-| `src/settings.spec.ts` | 7 | Settings resolver (rig.*/hydra.* fallback) |
+| `src/settings.spec.ts` | 7 | Settings resolver (rig.*/hydra.* fallback) — uses `node:test` |
 | `src/decorations.spec.ts` | 7 | Eval-flash + error decorations |
-| `src/editor/extract.spec.ts` | 10 | Document/line/block extraction |
-| `src/editor/index.spec.ts` | 10 | EditorService |
-| `src/rig/client.spec.ts` | 12 | RigWire (eval, sendCommand, feedback) |
+| `src/editor/extract.spec.ts` | 14 | Document/line/block/word/expression extraction |
+| `src/editor/index.spec.ts` | 14 | EditorService (document, line, block, selection, expression) |
+| `src/rig/client.spec.ts` | 11 | RigWire (eval, sendCommand, feedback, lifecycle) |
 | `src/rig/supervisor.spec.ts` | 10 | RigProcessSupervisor (in-process + hybrid) |
-| `src/capture/pipeline.spec.ts` | 15 | CapturePipeline (image, recording, timeout) |
-| `src/status/index.spec.ts` | 15 | StatusPanel (state, tooltip, feedback) |
+| `src/capture/pipeline.spec.ts` | 13 | CapturePipeline (image, recording, timeout, malformed feedback) |
+| `src/status/index.spec.ts` | 20 | StatusPanel (state, tooltip, feedback, dispose) |
 | `src/runtime-bundle.spec.ts` | 5 | Runtime bundle output verification |
 | `src/runtime/runtime-conformance.spec.ts` | 22 | Runtime conformance (adapter hooks + rig-host wire protocol) |
+| `src/manifest.spec.ts` | 8 | Manifest parity (C1-C6: commands, settings, context keys, README) |
 
 **Playwright** is the planned test runner for the runtime page (Phase 2 / Phase 3 work — served page mounts `<hydra-element>`, dispatches `hydra-ready`, round-trips `rig.eval`).
 
@@ -119,7 +120,7 @@ This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework.
 - **M0 (done):** Plugin Phase 0 — pre-Rig coherence. Single status panel, kill legacy double-OSC stack, remove 500ms readiness sleeps, add `rig.*` settings alongside `hydra.*`, fix documentation drift. Shipped in `906e772`.
 - **M1 (done):** Rig published — the six `@jdomizz/rig-*` packages on npm. (Blocked on user `npm login`; local file refs used in development.)
 - **M2 (done):** Wire freeze — generic wire core + `panic` + `capture:*` plugin extension.
-- **M3 (in progress):** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), external browser runtime as primary render surface, `<hydra-element>` replaces direct `hydra-synth` usage in `src/runtime/`. Commits: `914859c`, `3fdbd6c`, `147c26a`.
+- **M3 (done):** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), external browser runtime as primary render surface, `<hydra-element>` replaces direct `hydra-synth` usage in `src/runtime/`. Commits: `914859c`, `3fdbd6c`, `147c26a`.
 - **M4 (pending):** Publish vscode-hydra v1.0.
 
 ### M3 status
@@ -129,12 +130,12 @@ This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework.
 | Extension activation (`src/extension.ts`) | ✅ Done — wires all M3 modules |
 | Editor shell (`src/editor/`, `src/decorations.ts`, `src/diagnostics.ts`) | ✅ Done |
 | Rig wire (`src/rig/client.ts`, `src/rig/supervisor.ts`) | ✅ Done |
-| Runtime page (`src/runtime/`) | ✅ Done — mounts `<hydra-element>` |
-| Status panel (`src/status/`) | ✅ Done — rig state integration |
-| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire |
+| Runtime page (`src/runtime/`) | ✅ Done — uses `@jdomizz/rig-host`'s `createRigHost` to drive `<hydra-element>` |
+| Status panel (`src/status/`) | ✅ Done — sets `vscode-hydra.status` context key (`running`/`recording`/`panic`/`stopped`) |
+| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire + HTTP blobs (gamma correction honored) |
 | Settings (`src/settings*.ts`) | ✅ Done — `rig.*` primary, `hydra.*` fallback |
-| vitest test suite (86 tests) | ✅ Done |
-| `package.json` contributes `rig.*` settings | ⏳ Pending — settings not yet declared in `contributes.configuration` |
+| vitest test suite (124 tests) | ✅ Done |
+| `package.json` contributes `rig.*` settings | ✅ Done — 13 rig.* properties + rig.loadScripts + rig.capturePort + rig.captureTimeoutMs |
 | Playwright runtime tests | ⏳ Pending — Phase 2 / Phase 3 |
 | Publish v1.0 | ⏳ Pending — M4 |
 
