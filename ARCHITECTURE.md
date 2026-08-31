@@ -101,7 +101,7 @@ Runtime deps (npm after R1/R2; `file:` refs until then):
 
 ## Testing
 
-vitest, 131 tests across 11 spec files (settings resolver, decorations,
+vitest, 143 tests across 12 spec files (settings resolver, decorations,
 extraction, EditorService, RigWire, supervisor, capture pipeline,
 StatusPanel, runtime bundle output, runtime conformance, manifest parity).
 Playwright covers the served runtime page (mounts `<hydra-element>`,

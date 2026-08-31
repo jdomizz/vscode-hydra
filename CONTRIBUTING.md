@@ -29,7 +29,7 @@ Clone those alongside, or swap the refs for npm versions once published.
 | `npm run compile:runtime` | Runtime bundle only |
 | `npm run watch` | esbuild watch on the backend bundle |
 | `npm run lint` | ESLint on `src/` |
-| `npm test` | vitest (131 tests, 11 files) |
+| `npm test` | vitest (143 tests, 12 files) |
 | `npm run package` | Package as VSIX (`vsce package`) |
 | `npm run test:osc` | Run the demo OSC node (`demo/osc-node.js`) |
 

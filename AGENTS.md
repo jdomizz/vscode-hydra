@@ -7,7 +7,7 @@
 - `npm run compile:runtime` — runtime bundle only (rollup + copy `index.html`)
 - `npm run watch` — esbuild watch on the backend bundle
 - `npm run lint` — lint `src/` with ESLint
-- `npm test` — run unit tests (`vitest run` — 131 tests across 11 files)
+- `npm test` — run unit tests (`vitest run` — 143 tests across 12 files)
 - `npm run package` — package as VSIX (`vsce package`)
 - `npm run test:osc` — run demo OSC node (`node demo/osc-node.js`)
 
@@ -64,7 +64,7 @@ The legacy webview (`src/frontend/`) was deleted during the rewrite's P0 closure
 
 ## Testing
 
-**vitest** — 131 tests across 11 spec files:
+**vitest** — 143 tests across 12 spec files:
 
 | File | Tests | Covers |
 |---|---|---|
@@ -78,7 +78,8 @@ The legacy webview (`src/frontend/`) was deleted during the rewrite's P0 closure
 | `src/status/index.spec.ts` | 24 | StatusPanel (state, tooltip, feedback, dispose) |
 | `src/runtime-bundle.spec.ts` | 5 | Runtime bundle output verification |
 | `src/runtime/runtime-conformance.spec.ts` | 23 | Runtime conformance (adapter hooks + rig-host wire protocol) |
-| `src/manifest.spec.ts` | 8 | Manifest parity (C1-C6: commands, settings, context keys, README) |
+| `src/webview/panel.spec.ts` | 11 | RuntimeWebviewPanel (webview mount: CSP, panel reuse, dispose) |
+| `src/manifest.spec.ts` | 9 | Manifest parity (C1-C6: commands, settings, context keys, README) |
 
 **Playwright** is the planned test runner for the runtime page (Phase 2 / Phase 3 work — served page mounts `<hydra-element>`, dispatches `hydra-ready`, round-trips `rig.eval`).
 
