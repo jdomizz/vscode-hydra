@@ -47,6 +47,9 @@ describe('resolveSettings', () => {
       httpServerPath: '/d',
       relayPath: '/e',
       servePath: '/f',
+      loadScripts: ['https://example.com/ext.js'],
+      capturePort: 9090,
+      captureTimeoutMs: 15000,
     };
     const result = resolveSettings(rigSet, {});
     assert.deepStrictEqual(result, rigSet as unknown as RigSettings);

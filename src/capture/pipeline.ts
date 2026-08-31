@@ -8,10 +8,13 @@
  *
  * Transport model (per D3 γ correction): control commands travel on the
  * JSON wire; bulk data (PNG/MP4 blobs) travels out-of-band via HTTP POST
- * from the runtime to the editor-supervised server. For Phase 2 the wire
- * reply includes `path` directly (the runtime tells the editor where it
- * saved the file).
+ * from the runtime to the editor-supervised BlobReceiver server. When a
+ * BlobReceiver is provided, the pipeline generates captureIds, registers
+ * pending promises, and awaits the HTTP blob arrival. When no receiver
+ * is provided (legacy / test mode), the wire reply carries `path` directly.
  */
+
+import { randomUUID } from 'node:crypto';
 
 /**
  * Structural wire interface for the capture pipeline.
@@ -26,10 +29,21 @@ export interface WireLike {
 }
 
 /**
+ * Structural BlobReceiver interface for the capture pipeline.
+ *
+ * The pipeline only needs `expectBlob`; it does not depend on the full
+ * BlobReceiver class. This allows tests to inject a mock receiver.
+ */
+export interface BlobReceiverLike {
+    expectBlob(captureId: string, ext: string): Promise<string>;
+}
+
+/**
  * Result of a `capture:image` round-trip.
  *
  * `ok` is true when the runtime responded successfully. `path` is the
- * file path where the runtime saved the PNG (Phase 2 in-process model).
+ * file path where the blob was written (via BlobReceiver HTTP transport)
+ * or, in legacy mode, the path from the wire reply.
  */
 export interface CaptureImageResult {
     ok: boolean;
@@ -39,8 +53,8 @@ export interface CaptureImageResult {
 /**
  * Result of a `capture:stop` round-trip.
  *
- * `path` is the file path where the runtime saved the recording (Phase 2
- * in-process model).
+ * `path` is the file path where the blob was written (via BlobReceiver
+ * HTTP transport) or, in legacy mode, the path from the wire reply.
  */
 export interface StopRecordingResult {
     path?: string;
@@ -58,27 +72,49 @@ const FEEDBACK_TIMEOUT_MS = 10_000;
  * Capture pipeline — editor-side driver for screenshot and recording.
  *
  * Wraps a wire-like transport and exposes high-level methods:
- * - `captureImage()` — send `capture:image`, await reply with `path`
+ * - `captureImage()` — send `capture:image`, await blob via HTTP or wire reply
  * - `startRecording()` — send `capture:start`, await `capture:state { recording: true }`
- * - `stopRecording()` — send `capture:stop`, await `capture:state { recording: false }`
+ * - `stopRecording()` — send `capture:stop`, await blob via HTTP or wire reply
+ *
+ * When a {@link BlobReceiverLike} is provided, bulk data travels via HTTP
+ * (γ correction). When omitted, the pipeline falls back to the legacy
+ * "path on wire" model for backward compatibility.
  */
 export class CapturePipeline {
     #wire: WireLike;
+    #blobReceiver: BlobReceiverLike | null;
     #timeoutMs: number;
 
-    constructor(wire: WireLike, timeoutMs = FEEDBACK_TIMEOUT_MS) {
+    constructor(wire: WireLike, blobReceiverOrTimeout?: BlobReceiverLike | number, timeoutMs = FEEDBACK_TIMEOUT_MS) {
         this.#wire = wire;
-        this.#timeoutMs = timeoutMs;
+        if (typeof blobReceiverOrTimeout === 'number') {
+            this.#blobReceiver = null;
+            this.#timeoutMs = blobReceiverOrTimeout;
+        } else {
+            this.#blobReceiver = blobReceiverOrTimeout ?? null;
+            this.#timeoutMs = timeoutMs;
+        }
     }
 
     /**
-     * Send `capture:image` and await the runtime's response.
+     * Send `capture:image` and await the result.
      *
-     * The runtime replies with `{ type: 'capture:state', path }` (Phase 2
-     * in-process model). The blob travels out-of-band via HTTP POST.
+     * With BlobReceiver: generates a captureId, registers a pending blob,
+     * sends the wire command with the captureId, and awaits the HTTP POST.
+     * Without BlobReceiver (legacy): awaits the wire reply with `path`.
      */
     async captureImage(): Promise<CaptureImageResult> {
         try {
+            if (this.#blobReceiver) {
+                const captureId = randomUUID();
+                const blobPromise = this.#blobReceiver.expectBlob(captureId, '.png');
+                const reply = await this.#wire.sendCommand({ type: 'capture:image', captureId });
+                if (reply.type === 'error') {
+                    return { ok: false };
+                }
+                const path = await blobPromise;
+                return { ok: true, path };
+            }
             const reply = await this.#wire.sendCommand({ type: 'capture:image' });
             if (reply.type === 'error') {
                 return { ok: false };
@@ -103,12 +139,24 @@ export class CapturePipeline {
     }
 
     /**
-     * Send `capture:stop` and await `capture:state { recording: false }`.
+     * Send `capture:stop` and await the result.
      *
-     * Returns the path where the runtime saved the recording (Phase 2
-     * in-process model).
+     * With BlobReceiver: generates a captureId, registers a pending blob,
+     * sends the wire command with the captureId, and awaits the HTTP POST.
+     * Without BlobReceiver (legacy): awaits wire feedback with `path`.
      */
     async stopRecording(): Promise<StopRecordingResult> {
+        if (this.#blobReceiver) {
+            const captureId = randomUUID();
+            const blobPromise = this.#blobReceiver.expectBlob(captureId, '.webm');
+            await this.#awaitFeedback(
+                'capture:stop',
+                (fb) => fb.type === 'capture:state' && fb.recording === false,
+                { captureId },
+            );
+            const path = await blobPromise;
+            return { path };
+        }
         const fb = await this.#awaitFeedback(
             'capture:stop',
             (fb) => fb.type === 'capture:state' && fb.recording === false,
@@ -126,6 +174,7 @@ export class CapturePipeline {
     async #awaitFeedback(
         cmdType: string,
         match: (fb: { type: string; [key: string]: unknown }) => boolean,
+        extraFields?: Record<string, unknown>,
     ): Promise<{ type: string; [key: string]: unknown }> {
         return new Promise((resolve, reject) => {
             let unsub: (() => void) | null = null;
@@ -154,7 +203,7 @@ export class CapturePipeline {
                 reject(new Error(`CapturePipeline: timeout awaiting feedback for ${cmdType}`));
             }, this.#timeoutMs);
 
-            this.#wire.sendCommand({ type: cmdType }).then(
+            this.#wire.sendCommand({ type: cmdType, ...extraFields }).then(
                 (reply) => {
                     if (match(reply)) {
                         cleanup();

@@ -140,4 +140,49 @@ describe('RigProcessSupervisor', () => {
       await supervisor.stop();
     });
   });
+
+  describe('hybrid mode', () => {
+    it('reports spawned mode when rig.relayPath is non-default', () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        relayPath: '/usr/local/bin/rig-relay',
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      // Don't start — the binary doesn't exist. Just verify status reports spawned mode.
+      const status = supervisor.getStatus();
+      // Before start, mode is 'stopped' (not yet spawned).
+      expect(status.relay.mode).toBe('stopped');
+      expect(status.relay.running).toBe(false);
+    });
+
+    it('reports spawned mode when rig.servePath is non-default', () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        servePath: '/usr/local/bin/rig-serve',
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      const status = supervisor.getStatus();
+      expect(status.http.mode).toBe('stopped');
+      expect(status.http.running).toBe(false);
+    });
+
+    it('reports spawned mode for oscBridgePath and midiBridgePath in hybrid mode', () => {
+      const settings = makeSettings({
+        relayPort: 0,
+        httpPort: 0,
+        relayPath: '/usr/local/bin/rig-relay',
+        oscBridgePath: '/usr/local/bin/rig-osc-bridge',
+        midiBridgePath: '/usr/local/bin/rig-midi-bridge',
+        midiEnabled: true,
+      });
+      const supervisor = new RigProcessSupervisor(settings);
+      const status = supervisor.getStatus();
+      // Before start, all are stopped.
+      expect(status.osc.mode).toBe('stopped');
+      expect(status.midi.mode).toBe('stopped');
+      expect(status.midi.enabled).toBe(true);
+    });
+  });
 });

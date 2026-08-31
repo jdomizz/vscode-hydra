@@ -1,58 +1,92 @@
 import * as vscode from 'vscode';
+import * as path from 'node:path';
 import { getRigSettings, onSettingsChanged } from './settings.js';
 import { EditorService } from './editor/index.js';
 import { DiagnosticsManager } from './diagnostics.js';
 import { flashEditorForEval, errorRange } from './decorations.js';
 import { StatusPanel } from './status/index.js';
-import { RigWire } from './rig/index.js';
+import { RigWire, RigProcessSupervisor } from './rig/index.js';
 import { CapturePipeline } from './capture/pipeline.js';
+import { BlobReceiver } from './capture/transport.js';
 import open from 'open';
 
 /**
  * Extension activation — M3 v1.0 wiring.
  *
- * Connects the editor shell (EditorService, DiagnosticsManager, decorations)
- * to the rig transport (RigWire) and capture pipeline. The status panel
- * subscribes to wire feedback for transient state (panic, recording).
+ * Activation sequence:
+ * 1. Resolve settings (rig.* primary, hydra.* fallback).
+ * 2. Start RigProcessSupervisor (in-process relay + HTTP server by default).
+ * 3. Start BlobReceiver (HTTP server for capture blob upload).
+ * 4. Connect RigWire to the supervisor's relay URL.
+ * 5. Register commands (eval, capture, openRuntime, panic).
+ * 6. On wire ready, open the runtime page in the external browser.
  *
- * The runtime page (external browser) is served by rig-serve; the extension
- * opens it when the wire connects. The served runtime page is the sole
- * render surface.
+ * Deactivation reverses the order: wire → blobReceiver → supervisor.
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     const settings = getRigSettings();
     const diagnostics = new DiagnosticsManager();
     const editor = new EditorService();
     const status = new StatusPanel();
 
-    // Wire integration — connects to rig-relay (in-process bundle).
-    // For Phase 2 we use the file: workspace ref directly; production
-    // gets the npm-published version after M1.
+    // Start the rig process supervisor (relay + HTTP server).
+    // In-process by default; hybrid mode when rig.*Path settings point to
+    // external binaries. Resolves when both relay and HTTP server are listening.
+    const supervisor = new RigProcessSupervisor(settings);
+    let relayUrl: string;
+    let httpUrl: string;
+    try {
+        const urls = await supervisor.start();
+        relayUrl = urls.relayUrl;
+        httpUrl = urls.httpUrl;
+    } catch (err) {
+        const message = (err as Error).message;
+        vscode.window.showErrorMessage(`Rig supervisor failed to start: ${message}`);
+        context.subscriptions.push({ dispose: () => { diagnostics.dispose(); status.dispose(); } });
+        return;
+    }
+
+    // Start the blob receiver for capture uploads (PNG/WebM).
+    const captureDir = path.join(
+        context.storageUri?.fsPath ?? context.extensionPath,
+        'captures',
+    );
+    const blobReceiver = new BlobReceiver(captureDir);
+    try {
+        await blobReceiver.start(settings.capturePort);
+    } catch (err) {
+        const message = (err as Error).message;
+        vscode.window.showErrorMessage(`Capture receiver failed to start: ${message}`);
+    }
+
+    // Set initial status context key so keybindings/menus resolve correctly.
+    await vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'rendering');
+
+    // Wire integration — connects to the supervisor's relay.
     const wire = new RigWire();
-    const relayUrl = `ws://localhost:${settings.relayPort}`;
     wire.connect(relayUrl);
 
     // Status panel subscribes to wire feedback for panic/recording state.
-    // The panel internally handles `panic:state` and `capture:state` feedback.
     context.subscriptions.push(status.subscribe(wire));
+
+    // Current runtime URL — updated when the wire connects, read by openRuntime command.
+    let currentRuntimeUrl: string | null = null;
 
     // Wire ready (WebSocket open) → open the runtime page in external browser.
     wire.onReady(() => {
-        const runtimeUrl = `http://localhost:${settings.httpPort}/runtime/index.html?relay=${encodeURIComponent(relayUrl)}&context=hydra`;
+        currentRuntimeUrl = `${httpUrl}/runtime/index.html?relay=${encodeURIComponent(relayUrl)}&context=hydra&capturePort=${settings.capturePort}`;
         status.update({
             running: true,
             relay: { port: settings.relayPort, connected: true },
             http: { port: settings.httpPort, running: true },
             panic: false,
             recording: false,
-            runtimeUrl,
+            runtimeUrl: currentRuntimeUrl,
         });
-        void open(runtimeUrl);
+        void open(currentRuntimeUrl);
     });
 
     // Wire feedback → update status for state changes.
-    // The panel already handles panic:state and capture:state via subscribe();
-    // here we handle state/state:update to confirm the rig is running.
     wire.onFeedback((fb) => {
         if (fb.type === 'state' || fb.type === 'state:update') {
             status.update({
@@ -103,8 +137,8 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     }));
 
-    // Capture commands — delegate to CapturePipeline.
-    const capture = new CapturePipeline(wire);
+    // Capture commands — delegate to CapturePipeline with BlobReceiver.
+    const capture = new CapturePipeline(wire, blobReceiver);
     context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.captureImage', async () => {
         try {
             const result = await capture.captureImage();
@@ -140,6 +174,24 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     }));
 
+    // Open runtime in external browser — invoked by status bar click.
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.openRuntime', async () => {
+        if (currentRuntimeUrl) {
+            await vscode.env.openExternal(vscode.Uri.parse(currentRuntimeUrl));
+        } else {
+            vscode.window.showWarningMessage('Runtime is not ready yet');
+        }
+    }));
+
+    // Panic — silence all outputs immediately.
+    context.subscriptions.push(vscode.commands.registerCommand('vscode-hydra.panic', async () => {
+        try {
+            await wire.sendCommand({ type: 'panic' });
+        } catch (err) {
+            vscode.window.showErrorMessage(`Panic failed: ${(err as Error).message}`);
+        }
+    }));
+
     // Subscribe to settings changes (hot-reload of rig.* values).
     context.subscriptions.push(onSettingsChanged((s) => {
         // Re-connect wire if relay port changed.
@@ -157,12 +209,14 @@ export function activate(context: vscode.ExtensionContext): void {
         });
     }));
 
-    // Cleanup.
+    // Cleanup — reverse order of creation.
     context.subscriptions.push({
         dispose: () => {
             diagnostics.dispose();
             status.dispose();
             wire.dispose();
+            void blobReceiver.stop();
+            void supervisor.stop();
         },
     });
 }

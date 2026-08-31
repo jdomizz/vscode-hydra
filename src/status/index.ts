@@ -109,6 +109,7 @@ export class StatusPanel implements vscode.Disposable {
     #render(): void {
         if (!this.#state.running) {
             this.#barItem.text = '$(server) Rig: stopped';
+            void vscode.commands.executeCommand('setContext', 'vscode-hydra.status', 'stopped');
         } else {
             const parts: string[] = [];
             if (this.#state.relay) {
@@ -131,6 +132,15 @@ export class StatusPanel implements vscode.Disposable {
                 text += ' $(alert) PANIC';
             }
             this.#barItem.text = text;
+
+            // Set context key for keybinding/menu `when` clauses.
+            let statusValue: string = 'rendering';
+            if (this.#state.panic) {
+                statusValue = 'panic';
+            } else if (this.#state.recording) {
+                statusValue = 'recording';
+            }
+            void vscode.commands.executeCommand('setContext', 'vscode-hydra.status', statusValue);
         }
         this.#barItem.tooltip = this.#buildTooltip();
     }

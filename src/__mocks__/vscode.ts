@@ -180,6 +180,12 @@ interface StatusBarState {
 
 const statusBarState: StatusBarState = { items: [] };
 
+/** Captured information messages for manifest-parity tests (C5 deprecated aliases). */
+export const __mockedInfoMessages: string[] = [];
+
+/** Captured error messages for tests. */
+export const __mockedErrorMessages: string[] = [];
+
 export const window = {
     activeTextEditor: undefined as TextEditor | undefined,
     visibleTextEditors: [] as TextEditor[],
@@ -198,9 +204,9 @@ export const window = {
         statusBarState.items.push(item);
         return item;
     },
-    showInformationMessage: (_msg: string) => { /* noop */ },
+    showInformationMessage: (msg: string) => { __mockedInfoMessages.push(msg); },
     showWarningMessage: (_msg: string) => { /* noop */ },
-    showErrorMessage: (_msg: string) => { /* noop */ },
+    showErrorMessage: (msg: string) => { __mockedErrorMessages.push(msg); },
 };
 
 export function getStatusBarItems(): StatusBarItem[] {
@@ -277,8 +283,84 @@ export const env = {
     openExternal: async (_uri: Uri): Promise<boolean> => true,
 };
 
+/**
+ * Captured command registrations for manifest-parity tests.
+ * Reset via {@link __resetMockState}.
+ */
+export const __mockedCommands = new Set<string>();
+
+/**
+ * Captured context keys set via `executeCommand('setContext', key, value)`.
+ * Reset via {@link __resetMockState}.
+ */
+export const __mockedContexts = new Set<string>();
+
+/**
+ * Reset all captured mock state. Call in beforeEach/beforeAll of tests
+ * that depend on the captured sets.
+ */
+export function __resetMockState(): void {
+    __mockedCommands.clear();
+    __mockedContexts.clear();
+    __mockedInfoMessages.length = 0;
+    __mockedErrorMessages.length = 0;
+    statusBarState.items.length = 0;
+}
+
 export const commands = {
-    registerCommand: (_id: string, _handler: (...args: unknown[]) => unknown) => ({
+    registerCommand: (id: string, _handler: (...args: unknown[]) => unknown) => {
+        __mockedCommands.add(id);
+        return { dispose: () => { /* keep in captured set for manifest-parity assertions */ } };
+    },
+    executeCommand: async (command: string, ...args: unknown[]) => {
+        if (command === 'setContext' && args.length >= 2) {
+            __mockedContexts.add(args[0] as string);
+        }
+    },
+};
+
+// ── workspace configuration stubs ────────────────────────────────────
+
+interface MockConfiguration {
+    [key: string]: unknown;
+}
+
+const mockConfigurations: Record<string, MockConfiguration> = {};
+
+/**
+ * Set mock configuration values for a namespace. Tests call this to
+ * control what `workspace.getConfiguration(ns)` returns.
+ */
+export function __setMockConfiguration(namespace: string, values: MockConfiguration): void {
+    mockConfigurations[namespace] = { ...values };
+}
+
+interface MockInspected {
+    globalValue?: unknown;
+    workspaceValue?: unknown;
+    defaultValue?: unknown;
+}
+
+export const workspace = {
+    getConfiguration: (namespace?: string) => {
+        const values = namespace ? (mockConfigurations[namespace] ?? {}) : {};
+        return {
+            get<T>(key: string, defaultValue?: T): T {
+                return (values[key] as T) ?? (defaultValue as T);
+            },
+            inspect(key: string): MockInspected | undefined {
+                if (key in values) {
+                    return { workspaceValue: values[key] };
+                }
+                return undefined;
+            },
+            has(key: string): boolean {
+                return key in values;
+            },
+            update: async () => { /* noop */ },
+        };
+    },
+    onDidChangeConfiguration: (_handler: unknown) => ({
         dispose: () => { /* noop */ },
     }),
 };

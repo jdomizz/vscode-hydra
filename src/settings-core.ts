@@ -22,6 +22,9 @@ export interface RigSettings {
   readonly httpServerPath: string;
   readonly relayPath: string;
   readonly servePath: string;
+  readonly loadScripts: string[];
+  readonly capturePort: number;
+  readonly captureTimeoutMs: number;
 }
 
 export const DEFAULTS: RigSettings = {
@@ -38,6 +41,9 @@ export const DEFAULTS: RigSettings = {
   httpServerPath: 'sweep-http',
   relayPath: 'rig-relay',
   servePath: 'rig-serve',
+  loadScripts: [],
+  capturePort: 8081,
+  captureTimeoutMs: 30000,
 };
 
 /**
@@ -61,6 +67,9 @@ const KEY_MAP: ReadonlyArray<{
   { rigKey: 'httpServerPath', hydraKey: 'httpServerPath' },
   { rigKey: 'relayPath', hydraKey: null },
   { rigKey: 'servePath', hydraKey: null },
+  { rigKey: 'loadScripts', hydraKey: 'loadScripts' },
+  { rigKey: 'capturePort', hydraKey: null },
+  { rigKey: 'captureTimeoutMs', hydraKey: null },
 ];
 
 /**
