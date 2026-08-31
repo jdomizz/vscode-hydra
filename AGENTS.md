@@ -44,7 +44,6 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 
 - `src/rig/client.ts` — `RigWire` (wraps `TransportClient` from `@jdomizz/rig-transport`)
 - `src/rig/supervisor.ts` — `RigProcessSupervisor` (in-process relay + serve by default; hybrid mode via `rig.*Path`)
-- `src/rig/relay-server.ts` — `RelayServer` (thin in-process WebSocket relay)
 - `src/settings-core.ts` — pure settings resolver (`rig.*` primary, `hydra.*` fallback)
 - `src/settings.ts` — VS Code configuration integration
 
@@ -75,9 +74,10 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 | Package | Role |
 |---|---|
 | `@jdomizz/rig-host` | Renderer-side conformance kit (file ref to `../rig/packages/rig-host`) |
+| `@jdomizz/rig-relay` | WebSocket fan-out relay (file ref to `../rig/packages/rig-relay`) |
+| `@jdomizz/rig-serve` | Static file server (file ref to `../rig/packages/rig-serve`) |
 | `@jdomizz/rig-transport` | Wire protocol (file ref to `../rig/packages/rig-transport`) |
 | `hydra-element` | Runtime custom element (file ref to `../hydra-element`) |
-| `ws` | WebSocket server for in-process relay |
 | `open` | Open runtime URL in external browser |
 
 `osc-js` is in `devDependencies` (used by `demo/osc-node.js`).

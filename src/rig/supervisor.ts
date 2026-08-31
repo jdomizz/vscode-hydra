@@ -1,15 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'events';
-import {
-  createServer as createHttpServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from 'node:http';
-import { stat, readFile } from 'node:fs/promises';
-import { extname, resolve } from 'node:path';
 import type { RigSettings } from '../settings.js';
 import { DEFAULTS } from '../settings.js';
-import { RelayServer } from './relay-server.js';
+import { RelayServer } from '@jdomizz/rig-relay';
+import { createHttpServer } from '@jdomizz/rig-serve';
 
 /**
  * Composite process supervisor for rig services (relay, serve, osc-bridge, midi-bridge).
@@ -230,7 +224,7 @@ interface InProcessRelayOptions {
 }
 
 /**
- * In-process WebSocket relay wrapping {@link RelayServer}.
+ * In-process WebSocket relay wrapping {@link RelayServer} from `@jdomizz/rig-relay`.
  *
  * Ready detection: resolves {@link start} once the underlying WebSocketServer
  * emits `listening`. No fixed sleeps.
@@ -241,7 +235,7 @@ class InProcessRelay {
   #running = false;
 
   constructor(options: InProcessRelayOptions) {
-    this.#server = new RelayServer({ port: options.port });
+    this.#server = new RelayServer({ port: options.port, host: '127.0.0.1' });
   }
 
   async start(): Promise<void> {
@@ -255,7 +249,7 @@ class InProcessRelay {
   }
 
   get url(): string {
-    return this.#server.url;
+    return this.#server.address;
   }
 
   get running(): boolean {
@@ -271,11 +265,7 @@ interface InProcessServeOptions {
 }
 
 /**
- * In-process HTTP static file server.
- *
- * Ports the core logic of `@jdomizz/rig-serve`'s `createHttpServer` without
- * pulling the package as a runtime dependency. Serves files from `root` with
- * CORS headers and correct MIME types.
+ * In-process HTTP static file server wrapping `createHttpServer` from `@jdomizz/rig-serve`.
  *
  * Ready detection: resolves {@link start} once the HTTP server emits `listening`.
  */
@@ -283,98 +273,31 @@ class InProcessServe {
   readonly mode = 'in-process' as const;
   #server: ReturnType<typeof createHttpServer>;
   #port: number;
-  #root: string;
   #running = false;
 
   constructor(options: InProcessServeOptions) {
     this.#port = options.port;
-    this.#root = options.root;
-    this.#server = createHttpServer((req, res) => {
-      this.#handleRequest(req, res).catch((err) => {
-        if (!res.headersSent) {
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          res.end('Internal server error');
-        }
-      });
-    });
+    this.#server = createHttpServer({ port: options.port, root: options.root });
   }
 
   async start(): Promise<void> {
-    await new Promise<void>((resolve) => {
-      this.#server.listen(this.#port, () => resolve());
-    });
+    await this.#server.start();
     this.#running = true;
   }
 
   async stop(): Promise<void> {
     this.#running = false;
-    await new Promise<void>((resolve, reject) => {
-      this.#server.close((err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    await this.#server.stop();
   }
 
   get url(): string {
-    const addr = this.#server.address();
+    const addr = this.#server.server.address();
     const port = addr && typeof addr === 'object' ? addr.port : this.#port;
     return `http://127.0.0.1:${port}`;
   }
 
   get running(): boolean {
     return this.#running;
-  }
-
-  async #handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    setCorsHeaders(res);
-
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405, { 'Content-Type': 'text/plain' });
-      res.end('Method not allowed');
-      return;
-    }
-
-    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    const pathname = decodeURIComponent(url.pathname);
-    const filePath = resolve(this.#root, '.' + pathname);
-
-    if (!filePath.startsWith(this.#root)) {
-      res.writeHead(403, { 'Content-Type': 'text/plain' });
-      res.end('Forbidden');
-      return;
-    }
-
-    const fileStat = await stat(filePath).catch(() => null);
-    if (!fileStat || !fileStat.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not found');
-      return;
-    }
-
-    const contentType = getMimeType(filePath);
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Content-Length': fileStat.size,
-      'Cache-Control': 'no-cache',
-    });
-
-    if (req.method === 'HEAD') {
-      res.end();
-      return;
-    }
-
-    const content = await readFile(filePath);
-    res.end(content);
   }
 }
 
@@ -497,37 +420,4 @@ class SpawnedProcess extends EventEmitter {
       this.#backoffMs = Math.min(this.#backoffMs * 2, 30000);
     }, this.#backoffMs);
   }
-}
-
-// ─── HTTP helpers ────────────────────────────────────────────────────────────
-
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'application/javascript; charset=utf-8',
-  '.mjs': 'application/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-  '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg',
-  '.txt': 'text/plain; charset=utf-8',
-  '.glsl': 'text/plain; charset=utf-8',
-};
-
-function getMimeType(path: string): string {
-  return MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream';
-}
-
-function setCorsHeaders(res: ServerResponse): void {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
 }

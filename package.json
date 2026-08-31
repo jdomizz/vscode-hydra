@@ -254,6 +254,8 @@
   },
   "dependencies": {
     "@jdomizz/rig-host": "file:../rig/packages/rig-host",
+    "@jdomizz/rig-relay": "file:../rig/packages/rig-relay",
+    "@jdomizz/rig-serve": "file:../rig/packages/rig-serve",
     "@jdomizz/rig-transport": "file:../rig/packages/rig-transport",
     "hydra-element": "file:../hydra-element",
     "open": "^10.0.0",
