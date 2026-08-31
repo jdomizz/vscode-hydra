@@ -17,14 +17,14 @@
 
 1. **Branches for work.** AI agents create feature branches off `dev` (e.g. `feat/webview-mount`, `chore/esbuild-cjs`, `lane/F-plugin-v1` for the M3 lane) and iterate there.
 2. **Integration target = `dev`.** When the work is approved, the agent opens a PR or merges the feature branch into `dev`. This includes the M3 work on `lane/F-plugin-v1` — it merges to `dev`, not `main`.
-3. **`main` is human-only.** `main` only receives merges from a human reviewer. Once `main` is published (M4 publish), downstream VS Marketplace consumers pick it up; a bad agent commit there is hostile to consumers.
+3. **`main` is human-only.** `main` only receives merges from a human reviewer. Once `main` is published (the 0.4.0 publish), downstream VS Marketplace consumers pick it up; a bad agent commit there is hostile to consumers.
 4. **Tags are human-only.** Releasing a tag (e.g. `v0.4.0`) is a human-driven action; agents prepare on `dev` but never push the tag.
 
 The currently active branch should always be a feature branch or `dev`. If you find yourself sitting on `main` with uncommitted work, switch to a feature branch first (`git switch -c <topic>`) and replay the work there before pushing. Same rule across every repo in the workspace — see root AGENTS.md for the canonical statement.
 
 ## Architecture
 
-VS Code extension for live coding with Hydra video synthesizer. **Three-layer architecture** (M3 v1.0 rewrite):
+VS Code extension for live coding with Hydra video synthesizer. **Three-layer architecture** (Rig rewrite — ships as 0.4.0):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -44,7 +44,7 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 
 ### Layer 1 — Editor shell (`src/editor/`, `src/diagnostics.ts`, `src/decorations.ts`, `src/status/`, `src/capture/`)
 
-- `src/extension.ts` — activation, command registration, wires all M3 modules
+- `src/extension.ts` — activation, command registration, wires all rewrite modules
 - `src/editor/extract.ts` — document/line/block/selection extraction (pure)
 - `src/editor/index.ts` — `EditorService` (VS Code integration)
 - `src/decorations.ts` — eval-flash + error decorations
@@ -105,7 +105,7 @@ No file in `src/` may import `hydra-synth` directly. The codebase uses `<hydra-e
 git grep "from 'hydra-synth'" src/
 ```
 
-The legacy webview (`src/frontend/`) was deleted in M4 closure. `hydra-synth` remains a transitive dependency of `hydra-element`; the served runtime page is the sole render surface, mounted either inside a `WebviewPanel` iframe (`rig.renderer: 'webview'`, default) or in the system browser (`rig.renderer: 'external'`). See [Renderer surfaces](#renderer-surfaces) below.
+The legacy webview (`src/frontend/`) was deleted during the rewrite's P0 closure. `hydra-synth` remains a transitive dependency of `hydra-element`; the served runtime page is the sole render surface, mounted either inside a `WebviewPanel` iframe (`rig.renderer: 'webview'`, default) or in the system browser (`rig.renderer: 'external'`). See [Renderer surfaces](#renderer-surfaces) below.
 
 ### Renderer surfaces
 
@@ -136,44 +136,28 @@ The plugin mounts the served runtime page in one of two surfaces, controlled by 
 
 **Playwright** is the planned test runner for the runtime page (Phase 2 / Phase 3 work — served page mounts `<hydra-element>`, dispatches `hydra-ready`, round-trips `rig.eval`).
 
-## Migration: Rig (in progress)
+## Release status — Rig rewrite → 0.4.0
 
-This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework. The program is tracked in the workspace program roadmap (private registry at `/home/domi/code/.opencode/specs/roadmap.md`) with milestones M0–M4; the plugin-specific spec index is at `/home/domi/code/.opencode/specs/vscode-hydra/`.
+The Rig rewrite is complete on `dev` (local `package.json` = **0.4.0**, `displayName: "Hydra Code"`). The published surface is 0.3.1 "Hydra Live Code" (both marketplaces). The next release is **0.4.0 = R3 of the workspace release chain** (private registry, `.opencode/specs/common/roadmap.md`): it consumes hydra-element + the five `@jdomizz/rig-*` packages from npm (R1/R2, user-gated on `npm login`), completes the "Hydra Code" rename with a new logo (decision θ), and ships through a staged rc window.
 
-- **M0 (done):** Plugin Phase 0 — pre-Rig coherence. Single status panel, kill legacy double-OSC stack, remove 500ms readiness sleeps, add `rig.*` settings alongside `hydra.*`, fix documentation drift. Shipped in `906e772`.
-- **M1 (done):** Rig published — the six `@jdomizz/rig-*` packages on npm. (Blocked on user `npm login`; local file refs used in development.)
-- **M2 (done):** Wire freeze — generic wire core + `panic` + `capture:*` plugin extension.
-- **M3 (done):** Plugin Phase 2 — v1.0 rewrite. Three-layer architecture (editor shell / rig transport / renderer), external browser runtime as primary render surface, `<hydra-element>` replaces direct `hydra-synth` usage in `src/runtime/`. Commits: `914859c`, `3fdbd6c`, `147c26a`.
-- **M4 (pending):** Publish vscode-hydra v1.0.
+Program history: M0 (pre-Rig coherence, `906e772`), wire freeze + rig-host/rig-capture (rig side), M3 rewrite (`914859c`, `3fdbd6c`, `147c26a`, merged to `dev` as `c20d169`). P0 of the release spec (manifest truth, supervisor wiring, runtime bundling, dead-code deletion, parity test) is closed; P1–P4 remain. Release spec: `.opencode/specs/vscode-hydra/active/release-0.4.0.md`.
 
-### M3 status
+### Rig boundary rule (κ)
 
-| Component | Status |
-|---|---|
-| Extension activation (`src/extension.ts`) | ✅ Done — wires all M3 modules |
-| Editor shell (`src/editor/`, `src/decorations.ts`, `src/diagnostics.ts`) | ✅ Done |
-| Rig wire (`src/rig/client.ts`, `src/rig/supervisor.ts`) | ✅ Done |
-| Runtime page (`src/runtime/`) | ✅ Done — uses `@jdomizz/rig-host`'s `createRigHost` to drive `<hydra-element>` |
-| Status panel (`src/status/`) | ✅ Done — sets `vscode-hydra.status` context key (`running`/`recording`/`panic`/`stopped`) |
-| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire; runtime downloads the file via the browser (no editor-side HTTP receiver) |
-| Settings (`src/settings*.ts`) | ✅ Done — `rig.*` primary, `hydra.*` fallback |
-| vitest test suite (131 tests) | ✅ Done |
-| `package.json` contributes `rig.*` settings | ✅ Done — 12 rig.* properties + rig.loadScripts (capturePort / captureTimeoutMs removed: capture delivery no longer needs an editor-side HTTP port) |
-| Playwright runtime tests | ⏳ Pending — Phase 2 / Phase 3 |
-| Publish v1.0 | ⏳ Pending — M4 |
+**No rig-responsibility code lives in this repo.** If you find any (process supervision, wire plumbing, server lifecycle that is engine-agnostic), it gets extracted via a proposal — never refactored in place as if it were plugin code. Before implementing generic plumbing here, check whether rig already offers it, analyze whether rig should own it, and propose to the user first. Audit spec: `.opencode/specs/common/active/rig-boundary-audit.md`.
 
 ### Settings deprecation path
 
 | Setting | Status |
 |---|---|
 | `hydra.*` (existing) | Frozen. Remain as backward-compatible fallbacks. No new settings added here. |
-| `rig.*` (Phase 0+) | Primary. New settings go here. Become the only settings in v1.0 (with `hydra.*` auto-migrated). |
+| `rig.*` (Phase 0+) | Primary. New settings go here. The only namespace in 0.4.0 (with `hydra.*` read as silent fallbacks). |
 
-Contributors: when adding configuration, use `rig.*`. The `hydra.*` namespace is read-only until removal in v1.0.
+Contributors: when adding configuration, use `rig.*`. The `hydra.*` namespace is read-only compatibility surface.
 
 ## Publishing
 
-CI publishes to GitHub Releases, OpenVSX, and VS Marketplace on `v*` tags (`.github/workflows/publish.yml`).
+CI publishes to GitHub Releases, OpenVSX, and VS Marketplace on `v*` tags (`.github/workflows/publish.yml`). The 0.4.0 rollout is staged first: `v*-rc.*` tags build a VSIX attached to a GitHub Release only; stable `v*` tags hit both marketplaces (release spec P1).
 
 ## Workflow
 
@@ -193,8 +177,8 @@ When implementing a spec landed in this repo:
 6. Commit the registry repo alongside this repo's commit
 
 Cross-project developments (e.g. the Rig program) are sequenced and decided in
-the workspace program roadmap (private); the registry's `roadmap.md` is the
-authoritative program index.
+the workspace program roadmap (private); the registry's `common/roadmap.md` is
+the authoritative program index.
 
 When a spec (or any feature/fix) is finished and approved, **update the docs** before considering it done:
 
