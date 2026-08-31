@@ -37,8 +37,7 @@ VS Code extension for live coding with Hydra video synthesizer. **Three-layer ar
 - `src/decorations.ts` — eval-flash + error decorations
 - `src/diagnostics.ts` — `vscode.Diagnostic` collection (Problems panel)
 - `src/status/index.ts` — `StatusPanel` (single status bar item, rig state, ports tooltip, open-runtime link)
-- `src/capture/pipeline.ts` — `CapturePipeline` (`capture:image|start|stop` over wire + HTTP blob transport)
-- `src/capture/transport.ts` — out-of-band HTTP blob receiver
+- `src/capture/pipeline.ts` — `CapturePipeline` (`capture:image|start|stop` over wire; the runtime page triggers a browser download for delivery)
 
 ### Layer 2 — Rig wire (`src/rig/`, `src/settings*.ts`)
 
@@ -132,10 +131,10 @@ This plugin is migrating to the [Rig](https://github.com/jdomizz/rig) framework.
 | Rig wire (`src/rig/client.ts`, `src/rig/supervisor.ts`) | ✅ Done |
 | Runtime page (`src/runtime/`) | ✅ Done — uses `@jdomizz/rig-host`'s `createRigHost` to drive `<hydra-element>` |
 | Status panel (`src/status/`) | ✅ Done — sets `vscode-hydra.status` context key (`running`/`recording`/`panic`/`stopped`) |
-| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire + HTTP blobs (gamma correction honored) |
+| Capture pipeline (`src/capture/`) | ✅ Done — image + recording over wire; runtime downloads the file via the browser (no editor-side HTTP receiver) |
 | Settings (`src/settings*.ts`) | ✅ Done — `rig.*` primary, `hydra.*` fallback |
-| vitest test suite (124 tests) | ✅ Done |
-| `package.json` contributes `rig.*` settings | ✅ Done — 13 rig.* properties + rig.loadScripts + rig.capturePort + rig.captureTimeoutMs |
+| vitest test suite (126 tests) | ✅ Done |
+| `package.json` contributes `rig.*` settings | ✅ Done — 12 rig.* properties + rig.loadScripts (capturePort / captureTimeoutMs removed: capture delivery no longer needs an editor-side HTTP port) |
 | Playwright runtime tests | ⏳ Pending — Phase 2 / Phase 3 |
 | Publish v1.0 | ⏳ Pending — M4 |
 

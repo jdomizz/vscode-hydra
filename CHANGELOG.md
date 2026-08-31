@@ -17,10 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rollup runtime bundle: `src/runtime/` → `out/runtime/` (single-file output served by `rig-serve`)
 - Single status bar item with rig state (relay/http/osc/midi ports, panic, recording)
 - Eval-flash decoration + diagnostics (Problems panel integration)
-- Capture pipeline: `capture:image|start|stop` over wire + out-of-band HTTP blobs; `BlobReceiver` handles inbound blobs at `src/capture/transport.ts`
+- Capture pipeline: `capture:image|start|stop` over wire. **Delivery is browser download** in the runtime page (`URL.createObjectURL` + anchor click); the editor pipeline is fire-and-forget for `capture:image` and round-trips `capture:state` for `start`/`stop` (status bar recording indicator). No HTTP server in the editor; no port conflicts; no workspace-storage round-trip. Files land in the browser's Downloads folder — `hydra-capture-<ts>.png` / `hydra-recording-<ts>.webm`.
 - `rig.*` settings namespace with `hydra.*` fallback (`rig.instrument`, `rig.target`, `rig.renderer`, `rig.relayPort`, `rig.httpPort`, `rig.udpIn/Out`, `rig.midiEnabled`, `rig.*Path`)
 - `RigProcessSupervisor`: in-process rig-relay + rig-serve by default; hybrid mode via `rig.*Path` settings; wired at activation with manifest reconciliation
-- Activation wires `RigProcessSupervisor` + `BlobReceiver` + rig commands end-to-end (`src/extension.ts`)
+- Activation wires `RigProcessSupervisor` + rig commands end-to-end (`src/extension.ts`)
 - `RuntimeContext` interface for runtime pages
 - m4 P2 compatibility shims for 0.3.x → v1.0 upgrade:
   - `rig.renderer: 'external' | 'webview'` toggle (default `external`; `webview` falls back to `external` since legacy webview was deleted)
